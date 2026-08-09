@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.13.9] (2026-08-09)
+
+Compare page catches up with Slack and table settings. Timestamp: 2026-08-09 23:26 UTC.
+
+### Added
+
+- Slack row on the Compare page: the upstream project has no Slack integration, while this port ships optional notifications for new records, deal stage moves, task completions, and agent runs, plus the /crm slash command bot over signed HTTP actions, all off by default (`src/pages/Compare.tsx`)
+- Tables and custom fields row: per-entity column rename, hide, and pin, new-record defaults, and custom fields in four types that render as sortable, editable columns, versus fixed columns upstream (`src/pages/Compare.tsx`)
+
 ## [2.13.8] (2026-08-09)
 
 Landing bento absorbs the agents section and gains Slack, web research, and Ask cards. Timestamp: 2026-08-09 23:20 UTC.

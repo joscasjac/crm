@@ -52,6 +52,12 @@ const ROWS: Array<Row> = [
       "AgentMail component: persistent inbox with threads synced into Convex tables",
   },
   {
+    area: "Slack",
+    upstream: "Not included",
+    convex:
+      "Optional notifications for new records, deal stage moves, task completions, and agent runs, plus a /crm slash command bot over signed HTTP actions. Off by default; webhook or bot token modes",
+  },
+  {
     area: "Web scraping",
     upstream: "Not included",
     convex:
@@ -80,6 +86,12 @@ const ROWS: Array<Row> = [
     upstream: "Notes on records",
     convex:
       "Notes and tasks on every company and contact, with due dates, email reminders through the selected provider, and completion tracked on the timeline",
+  },
+  {
+    area: "Tables and custom fields",
+    upstream: "Fixed columns per table",
+    convex:
+      "Per-entity settings: rename, hide, and pin columns, new-record defaults, and custom fields (text, number, select, date) that become sortable, editable columns",
   },
   {
     area: "Search",
