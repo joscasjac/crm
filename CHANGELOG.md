@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.8.0] (2026-08-09)
+
+Context.dev as a second provider for web search and web scraping. Timestamp: 2026-08-09 10:30 UTC.
+
+### Added
+
+- The chat agent's web research tools now accept two providers each: web search runs on Exa or Context.dev, and page reading runs on Firecrawl or Context.dev (`convex/web.ts`). Any one key enables its tool; with both set, the named provider leads and Context.dev covers a failed call. The same `CONTEXT_DEV_API_KEY` that powers brand enrichment covers both tools, so one key gives the agent the full research kit
+
+### Changed
+
+- Settings integration rows, the Compare page web search and scraping rows, the docs web research section and environment variable table, and the README now describe both providers per tool and the fallback order (`src/app/Settings.tsx`, `src/pages/Compare.tsx`, `src/pages/Docs.tsx`, `README.md`)
+- Not-configured tool replies now name both keys that can turn the feature on, for example "Set EXA_API_KEY or CONTEXT_DEV_API_KEY to enable it"
+
+## [2.7.0] (2026-08-09)
+
+A 20 second demo video on the landing page. Timestamp: 2026-08-09 10:00 UTC.
+
+### Added
+
+- Demo video section on the landing page, above "What it actually does": a silent 20 second dark mode walkthrough built from live app screenshots, opening with "The CRM built for agents, now on" the Convex logo, zooming on the pipeline stats, deal cards, agents, and Ask, and closing on "Just use" above the Convex logo; no audio track, Helvetica type, 2 MB 1080p (`src/pages/Landing.tsx`, `public/demo.mp4`, `public/demo-poster.png`)
+- `heygen-assets/` is gitignored: video production scratch (screenshots, asset ids, session logs) stays local, and the HeyGen API key lives in the CLI's user config, never in the repo
+- Terminal style git clone one liner with a copy button in the landing hero, below the CTA buttons and above the Built with divider (`src/pages/Landing.tsx`)
+
 ## [2.6.0] (2026-08-09)
 
 Compose email from records, a Settings sub-sidebar, and a docs sidebar layout. Timestamp: 2026-08-09 09:25 UTC.
@@ -7,6 +30,7 @@ Compose email from records, a Settings sub-sidebar, and a docs sidebar layout. T
 ### Added
 
 - Compose email: an Email button on company and contact pages opens a floating compose window that drags by its title bar and resizes from the corner, with To, Cc, Bcc, Subject, a markdown body with live preview, and file attachments stored in Convex file storage (`src/components/ComposeEmail.tsx`)
+- Landing hero shows a terminal-style `git clone` one-liner with a copy button below the CTA buttons, above the Built with wall (`src/pages/Landing.tsx`)
 - `email.compose` mutation writes an EMAIL activity on the record timeline and the Activity page, then schedules `email.sendComposed`, which delivers through the selected provider (Resend sends each recipient an individual copy so Bcc stays private; AgentMail uses native Cc and Bcc), appends the default signature, and turns attachments into signed download links; keyless installs log the skip instead of failing (`convex/email.ts`)
 - Compose defaults in Settings: from name, from address, and a default signature stored on the workspace (`emailFromName`, `emailFromAddress`, `emailSignature` in `convex/schema.ts`); the from identity applies to Resend, since AgentMail sends from its inbox address
 - Settings sub-sidebar: each concern is its own page under `/app/settings/:section` (Team, Integrations, Email, AI provider, Sidebar, Custom fields), matching the Ask sub-sidebar pattern (`src/app/Settings.tsx`, `src/App.tsx`)

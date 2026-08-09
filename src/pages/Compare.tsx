@@ -55,13 +55,13 @@ const ROWS: Array<Row> = [
     area: "Web scraping",
     upstream: "Not included",
     convex:
-      "Firecrawl component: the chat agent can read any web page as markdown",
+      "Firecrawl or Context.dev components: the chat agent reads any web page as markdown. Either key works alone; with both set, Firecrawl leads and Context.dev covers failures",
   },
   {
     area: "Web search",
     upstream: "Not included",
     convex:
-      "Exa component: semantic web search as a tool the chat agent can call",
+      "Exa or Context.dev components: web search as a tool the chat agent can call. Either key works alone; with both set, Exa leads and Context.dev covers failures",
   },
   {
     area: "AI providers",

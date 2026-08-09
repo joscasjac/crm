@@ -62,15 +62,17 @@ app.use(rateLimiter);
 app.use(migrations);
 app.use(resend);
 
-// Brand data. Enrichment reports "not configured" when the key is the
-// literal string "unset" instead of failing the deploy.
+// Brand data plus a second provider for web search and scraping. Enrichment
+// and the web tools report "not configured" when the key is the literal
+// string "unset" instead of failing the deploy.
 app.use(contextDev, {
   env: { CONTEXT_DEV_API_KEY: app.env.CONTEXT_DEV_API_KEY },
 });
 
 // Web research for agents. Firecrawl scrapes and crawls pages; Exa runs
-// semantic web search. Both take the "unset" sentinel; the wrappers in
-// convex/web.ts refuse to call the vendors without a real key.
+// semantic web search; Context.dev above covers both as a fallback. All
+// take the "unset" sentinel; the wrappers in convex/web.ts refuse to call
+// a vendor without a real key.
 app.use(firecrawl, {
   // Mounts the crawl webhook at <deployment>.convex.site/firecrawl/webhook.
   httpPrefix: "/firecrawl/",

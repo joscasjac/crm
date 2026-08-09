@@ -40,9 +40,10 @@ const readCrmHistory = createTool({
   },
 });
 
-// Web research through the Firecrawl and Exa components. Both degrade
-// honestly: without a real key the tool returns a "not configured" note the
-// agent repeats to the user instead of guessing.
+// Web research through the Firecrawl, Exa, and Context.dev components. Any
+// one key enables its tool, and everything degrades honestly: without a real
+// key the tool returns a "not configured" note the agent repeats to the user
+// instead of guessing.
 const searchTheWeb = createTool({
   description:
     "Search the web for recent information about a company or person. Returns titles, URLs, and highlights.",

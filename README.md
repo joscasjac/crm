@@ -32,9 +32,9 @@ Try it at [convex.link/crmonconvex](https://convex.link/crmonconvex) (served fro
 | Hosting | [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting) serving the built app |
 | Agent runtime | [`@convex-dev/agent`](https://www.convex.dev/components/agent) with tools, threads, and message history |
 | Work queues | [`@convex-dev/workpool`](https://www.convex.dev/components/workpool), three pools so slow work cannot starve the dispatcher |
-| Brand enrichment | [`@context-dot-dev/convex`](https://www.convex.dev/components/context-dot-dev/convex), the same Context.dev data the upstream uses |
-| Web scraping | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex), the chat agent reads pages as markdown |
-| Web search | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa), semantic search as an agent tool |
+| Brand enrichment | [`@context-dot-dev/convex`](https://www.convex.dev/components/context-dot-dev/convex), the same Context.dev data the upstream uses; the same key also backs web search and scraping |
+| Web scraping | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex) or Context.dev, the chat agent reads pages as markdown with either key |
+| Web search | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa) or Context.dev, search as an agent tool with either key |
 | AI providers | OpenAI, Claude (Anthropic), or OpenRouter via the AI SDK, switchable in Settings, no key ships by default |
 | Email | [`@convex-dev/resend`](https://www.convex.dev/components/resend) or [`@agentmail/convex`](https://www.convex.dev/components/agentmail/convex), switchable in Settings |
 | Caching | [`@convex-dev/action-cache`](https://www.convex.dev/components/action-cache), 7 day TTL on brand lookups, replaces Redis |
@@ -85,9 +85,9 @@ Every outside key is optional in practice. The app degrades honestly: features t
 
 | Variable | What it enables | Without it |
 | --- | --- | --- |
-| `CONTEXT_DEV_API_KEY` | Company enrichment from Context.dev brand data | Enrichment tasks complete with a "not configured" note. Set to `unset` to run keyless. |
-| `FIRECRAWL_API_KEY` | Chat agent reads web pages via Firecrawl | The tool tells the agent which key enables it. Set to `unset` to run keyless. |
-| `EXA_API_KEY` | Chat agent searches the web via Exa | Same honest degradation. Set to `unset` to run keyless. |
+| `CONTEXT_DEV_API_KEY` | Company enrichment from Context.dev brand data, plus web search and page reading for the chat agent when the Exa or Firecrawl key is missing | Enrichment tasks complete with a "not configured" note. Set to `unset` to run keyless. |
+| `FIRECRAWL_API_KEY` | Chat agent reads web pages via Firecrawl. Context.dev covers this when only its key is set | The tool tells the agent which keys enable it. Set to `unset` to run keyless. |
+| `EXA_API_KEY` | Chat agent searches the web via Exa. Context.dev covers this when only its key is set | Same honest degradation. Set to `unset` to run keyless. |
 | `OPENAI_API_KEY` | Chat and agent reasoning when OpenAI is the selected provider | Chat replies name the missing key |
 | `ANTHROPIC_API_KEY` | Chat and agent reasoning when Claude is the selected provider | Same |
 | `OPENROUTER_API_KEY` | Chat and agent reasoning when OpenRouter is the selected provider | Same |
@@ -167,7 +167,7 @@ Note on the reset cron: `convex/crons.ts` resets all content every 10 minutes be
 - Sidebar items reorder by drag and drop; Settings can hide items; the rail icon collapses the sidebar
 - Agent task queue with leasing, workpools, and scheduled rechecks that require a reason
 - Agents that build agents: describe a process, get a versioned draft definition
-- Record chat with web research tools (Firecrawl and Exa) that answer honestly about missing keys
+- Record chat with web research tools (Firecrawl, Exa, or Context.dev, any one key is enough) that answer honestly about missing keys
 - AI provider picker: OpenAI, Claude, or OpenRouter, none configured by default
 - Dark and light themes with a toggle in the header and the sidebar footer
 - Demo reset every 10 minutes via cron (the Activity log resets with it)
@@ -186,7 +186,7 @@ The app has a live comparison page at `/compare` and full setup docs at `/docs`.
 | Queue | Redis backed workers | Workpool components, queue as a table |
 | Auth | Better Auth | Convex Auth ready, off in demo |
 | Email | Resend SDK calls | Resend or AgentMail components, switchable |
-| Web research | Not included | Firecrawl scraping and Exa search as agent tools |
+| Web research | Not included | Firecrawl or Context.dev scraping and Exa or Context.dev search as agent tools; any one key works |
 | AI providers | OpenAI | OpenAI, Claude, or OpenRouter, switchable in Settings |
 | Workspace chat | Per-record chat only | Ask page with streamed replies, slash commands, and thread history |
 | Notes and tasks | Notes on records | Notes and tasks with due dates, reminders, and completion |

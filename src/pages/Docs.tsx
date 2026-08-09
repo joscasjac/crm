@@ -12,7 +12,7 @@ const SECTIONS = [
   { id: "fork-and-setup", label: "Fork and set it up" },
   { id: "environment-variables", label: "Environment variables" },
   { id: "email", label: "Email: Resend and AgentMail" },
-  { id: "web-research", label: "Web research: Firecrawl and Exa" },
+  { id: "web-research", label: "Web research: Firecrawl, Exa, Context.dev" },
   { id: "ai-providers", label: "AI providers: OpenAI, Claude, OpenRouter" },
   { id: "auth", label: "Turning on sign-in" },
   { id: "deploy", label: "Deploying to production" },
@@ -76,19 +76,22 @@ const ENV_ROWS: Array<{
   {
     name: "CONTEXT_DEV_API_KEY",
     required: "Yes, but “unset” works",
-    enables: "Brand enrichment: logos, industry, and descriptions on company records",
+    enables:
+      "Brand enrichment on company records, plus web search and page reading for the chat agent when Exa or Firecrawl keys are missing",
     where: "context.dev",
   },
   {
     name: "FIRECRAWL_API_KEY",
     required: "Yes, but “unset” works",
-    enables: "The chat agent can read any web page as markdown",
+    enables:
+      "The chat agent reads any web page as markdown. Context.dev covers this when only its key is set",
     where: "firecrawl.dev",
   },
   {
     name: "EXA_API_KEY",
     required: "Yes, but “unset” works",
-    enables: "The chat agent can search the web semantically",
+    enables:
+      "The chat agent searches the web semantically. Context.dev covers this when only its key is set",
     where: "exa.ai",
   },
   {
@@ -341,8 +344,9 @@ export function Docs() {
                 <span className="text-white">Record chat.</span> Open any
                 company or contact and ask it a question. The agent reads your
                 own CRM history first, and can search the web or read a page
-                when Firecrawl and Exa keys are set. Without keys it tells you
-                which key enables what instead of making something up.
+                when a Firecrawl, Exa, or Context.dev key is set. Without
+                keys it tells you which key enables what instead of making
+                something up.
               </li>
               <li>
                 <span className="text-white">Settings.</span> Split into
@@ -523,37 +527,53 @@ npx convex env set EXA_API_KEY unset`}</Code>
             </p>
           </Section>
 
-          <Section id="web-research" title="Web research: Firecrawl and Exa">
+          <Section
+            id="web-research"
+            title="Web research: Firecrawl, Exa, and Context.dev"
+          >
             <p>
-              Record chat has two research tools beyond your own CRM history.
-              Both show up automatically once their keys are real.
+              Record chat has two research tools beyond your own CRM history:
+              read a page and search the web. Each tool has two providers,
+              and any one real key turns its tool on.
             </p>
             <ul className="flex list-disc flex-col gap-2 pl-5">
               <li>
-                <span className="text-white">Firecrawl</span> reads a specific
-                web page and returns the main content as markdown. Ask the
+                <span className="text-white">Reading pages.</span> Ask the
                 chat to “read their pricing page” and the agent
-                fetches it through the{" "}
+                fetches the main content as markdown through the{" "}
                 <Ext href="https://www.convex.dev/components/firecrawl/firecrawl-convex">
                   Firecrawl component
-                </Ext>
-                . Results are cached for an hour so repeated questions do not
-                spend credits.
+                </Ext>{" "}
+                when <K>FIRECRAWL_API_KEY</K> is real, or the{" "}
+                <Ext href="https://www.convex.dev/components/context-dot-dev/convex">
+                  Context.dev component
+                </Ext>{" "}
+                when only <K>CONTEXT_DEV_API_KEY</K> is. Firecrawl results
+                are cached for an hour so repeated questions do not spend
+                credits.
               </li>
               <li>
-                <span className="text-white">Exa</span> is semantic web
-                search. Ask “what has this company shipped lately”
-                and the agent searches through the{" "}
+                <span className="text-white">Searching the web.</span> Ask
+                “what has this company shipped lately” and the
+                agent searches through the{" "}
                 <Ext href="https://www.convex.dev/components/exalabs/convex-exa">
                   Exa component
                 </Ext>{" "}
-                and cites titles and URLs in its answer.
+                when <K>EXA_API_KEY</K> is real, or Context.dev when only its
+                key is, citing titles and URLs in its answer.
               </li>
             </ul>
             <p>
-              Without keys, the tools return a plain “not configured”
-              note and the agent repeats it to you, naming the key that turns
-              the feature on. Nothing is faked.
+              With both keys set for a tool, the named provider leads and
+              Context.dev covers a failed call. The same{" "}
+              <K>CONTEXT_DEV_API_KEY</K> that powers brand enrichment powers
+              both research tools, so one key gives the agent the full
+              research kit.
+            </p>
+            <p>
+              Without any key, the tools return a plain “not
+              configured” note and the agent repeats it to you, naming
+              the keys that turn the feature on. Nothing is faked.
             </p>
           </Section>
 
@@ -823,7 +843,8 @@ npm run deploy`}</Code>
                 <Ext href="https://www.convex.dev/components/context-dot-dev/convex">
                   Context.dev
                 </Ext>{" "}
-                supplies brand data for company enrichment.
+                supplies brand data for company enrichment and doubles as a
+                web search and scraping provider for the chat agent.
               </li>
               <li>
                 <Ext href="https://www.convex.dev/components/firecrawl/firecrawl-convex">

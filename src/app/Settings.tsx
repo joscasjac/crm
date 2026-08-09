@@ -109,10 +109,10 @@ function IntegrationsSection() {
         <h3 className="mb-3 text-sm font-medium text-white">Integrations</h3>
         <div className="flex flex-col gap-3 text-sm">
           <IntegrationRow
-            name="Context.dev brand data"
-            detail="Set CONTEXT_DEV_API_KEY on the deployment to enable company enrichment."
+            name="Context.dev brand data and web research"
+            detail="Set CONTEXT_DEV_API_KEY to enable company enrichment. The same key also gives the chat agent web search and page reading when Exa or Firecrawl keys are missing."
             configured={capabilities?.contextDev}
-            docsId="environment-variables"
+            docsId="web-research"
           />
           <IntegrationRow
             name="OpenAI"
@@ -134,13 +134,13 @@ function IntegrationsSection() {
           />
           <IntegrationRow
             name="Firecrawl web scraping"
-            detail="Set FIRECRAWL_API_KEY so the chat agent can read web pages."
+            detail="Set FIRECRAWL_API_KEY so the chat agent can read web pages. Context.dev covers this when only its key is set."
             configured={capabilities?.firecrawl}
             docsId="web-research"
           />
           <IntegrationRow
             name="Exa web search"
-            detail="Set EXA_API_KEY so the chat agent can search the web."
+            detail="Set EXA_API_KEY so the chat agent can search the web. Context.dev covers this when only its key is set."
             configured={capabilities?.exa}
             docsId="web-research"
           />

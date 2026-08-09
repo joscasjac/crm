@@ -40,6 +40,10 @@ yarn-error.log*
 # Agent worktrees
 .claude/worktrees/
 
+# HeyGen video production scratch (screenshots, asset ids, session logs)
+heygen-assets/
+heygen-video-log.jsonl
+
 # eve build output
 .eve
 .output

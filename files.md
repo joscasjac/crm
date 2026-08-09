@@ -44,7 +44,7 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | `logs.ts` | Activity log: record helper for mutations and actions, list query, clear and clearMany mutations |
 | `search.ts` | Command-K global search on full text `search_name` indexes with a bounded scan fallback for domains and emails |
 | `email.ts` | Resend and AgentMail wrappers, provider query and toggle, compose defaults (from identity, signature), the compose mutation with timeline logging and attachment upload URLs, and the sendComposed delivery action; logs a no-op when no key is configured |
-| `web.ts` | Firecrawl scrape and Exa search internal actions with keyless graceful degradation |
+| `web.ts` | Web scrape (Firecrawl or Context.dev) and web search (Exa or Context.dev) internal actions; any one key enables its tool, and a failed primary call falls back to the other configured provider |
 | `capabilities.ts` | Query reporting which integrations have real keys, shown in Settings |
 | `users.ts` | Team member list for pickers and avatars |
 | `model/access.ts` | Write access checks; demo mode keeps writes open |
@@ -80,7 +80,7 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | `app/Activity.tsx` | Live function-outcome log with pause, select one or all, and clear, in the shape of the Convex dashboard |
 | `app/Agents.tsx` | Agent builder: describe a process, manage drafts, deploy, pause |
 | `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Integrations (with the "Adding API keys" panel), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide, Custom fields |
-| `pages/Landing.tsx` | Marketing page: hero, built-with, agent sections, demo notes, copy prompt |
+| `pages/Landing.tsx` | Marketing page: hero with copy prompt and git clone one-liner, built-with, agent sections, 20 second demo video, demo notes |
 | `pages/Compare.tsx` | Upstream vs Convex comparison table |
 | `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar and active-section highlight: fork, env vars, email and compose, web research, AI providers, auth, deploy, coding agents |
 
@@ -92,6 +92,8 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | `logos/react-white.svg` | White React mark for the Built with section |
 | `logos/vite-white.svg` | White Vite mark for the Built with section |
 | `og.png` | 1200x630 dark mode share image: "The CRM built for agents on Convex" hero with the full built-with logo wall |
+| `demo.mp4` | 20 second HeyGen product demo video shown on the landing page |
+| `demo-poster.png` | Poster frame for the landing page demo video |
 | `landing/` | Avatars and company logos carried over from upstream for seed data |
 
 ## docs/
