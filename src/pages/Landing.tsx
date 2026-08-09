@@ -44,9 +44,9 @@ export function SiteHeader() {
             Docs
           </Link>
           <a
-            href="https://github.com/waynesutton/trycrm-convex/fork"
+            href="https://github.com/waynesutton/trycrm-convex"
             className="text-sm text-neutral-400 transition-colors hover:text-white">
-            Fork
+            GitHub
           </a>
           <ThemeToggle compact />
           <Link

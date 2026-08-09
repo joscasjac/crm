@@ -2,10 +2,11 @@
 
 ## to do
 
-- Commit and push to github.com/waynesutton/trycrm-convex, then run `npm run deploy` so the live site picks up the new pages, theme, and og.png
-- Optional: set real CONTEXT_DEV_API_KEY, OPENAI_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, RESEND_API_KEY, or AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID on the deployment
+- Optional: set real OPENAI_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, RESEND_API_KEY, or AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID on the deployment (CONTEXT_DEV_API_KEY is already real on prod)
 
 ## completed
+
+- 2026-08-09 10:55 UTC: Reordered the deploy instructions in the docs deploy section and the README so the three --prod env sentinel commands come before npm run deploy; the old order pushed first, which fails on a fresh production deployment. Dropped the redundant npm run build. Redeployed static files so the live docs page shows the corrected steps. Committed and pushed as "docs: set prod env sentinels before first deploy"; the live site at good-dog-8.convex.site is current.
 
 - 2026-08-09 10:50 UTC: Fixed the failed prod deploy. Root cause: dev and prod have separate env vars, and prod never got the EXA_API_KEY and FIRECRAWL_API_KEY sentinels. Tried making the app env vars optional first, but Convex rejects binding a required component var to an optional app var, so the "unset" sentinel stays the documented keyless path (comment updated in convex/convex.config.ts). Set both sentinels on prod and deployed backend plus static files to good-dog-8.convex.site. Verified: capabilities:status on prod shows contextDev true (real key), exa and firecrawl false, site returns 200. The live demo now has working web search and page reading through the Context.dev fallback.
 
