@@ -1,5 +1,113 @@
 # Changelog
 
+## [2.6.0] (2026-08-09)
+
+Compose email from records, a Settings sub-sidebar, and a docs sidebar layout. Timestamp: 2026-08-09 09:25 UTC.
+
+### Added
+
+- Compose email: an Email button on company and contact pages opens a floating compose window that drags by its title bar and resizes from the corner, with To, Cc, Bcc, Subject, a markdown body with live preview, and file attachments stored in Convex file storage (`src/components/ComposeEmail.tsx`)
+- `email.compose` mutation writes an EMAIL activity on the record timeline and the Activity page, then schedules `email.sendComposed`, which delivers through the selected provider (Resend sends each recipient an individual copy so Bcc stays private; AgentMail uses native Cc and Bcc), appends the default signature, and turns attachments into signed download links; keyless installs log the skip instead of failing (`convex/email.ts`)
+- Compose defaults in Settings: from name, from address, and a default signature stored on the workspace (`emailFromName`, `emailFromAddress`, `emailSignature` in `convex/schema.ts`); the from identity applies to Resend, since AgentMail sends from its inbox address
+- Settings sub-sidebar: each concern is its own page under `/app/settings/:section` (Team, Integrations, Email, AI provider, Sidebar, Custom fields), matching the Ask sub-sidebar pattern (`src/app/Settings.tsx`, `src/App.tsx`)
+- Docs sidebar layout: a sticky left navigation with active-section highlight while scrolling, in the style of Vercel's docs; the top table of contents remains on mobile (`src/pages/Docs.tsx`)
+- Docs email section covers composing, from identity, signature, and attachment links, with links to the Resend and AgentMail component pages and Resend domain verification
+
+### Changed
+
+- Landing header link now says Fork and points at the GitHub fork URL (`src/pages/Landing.tsx`)
+
+## [2.5.1] (2026-08-09)
+
+Accessible text contrast in both themes, API key guidance inside Settings, and a keyboard shortcuts modal. Timestamp: 2026-08-09 09:20 UTC.
+
+### Added
+
+- Keyboard shortcuts modal: a Phosphor keyboard icon next to the theme switcher in the sidebar footer opens a themed list of every shortcut; `⌘?` toggles the modal and `⌘.` collapses or expands the sidebar, with Ctrl as the modifier on non-Mac keyboards (`src/components/ShortcutsModal.tsx`, `src/app/AppLayout.tsx`)
+- "Adding API keys" panel in Settings: shows the `npx convex env set` command for dev and the same command with `--prod`, explains that every Convex project has two deployments with separate variables, and links to the environment variables and deploy docs sections (`src/app/Settings.tsx`)
+- A "Setup guide" link on every Integrations row in Settings, pointing at the docs section for that key (email, web research, AI providers, environment variables)
+- Docs page now scrolls to the section when opened with a hash like `/docs#email` from anywhere in the app (`src/pages/Docs.tsx`)
+- Email provider and AI provider panels in Settings link to their docs sections
+
+### Changed
+
+- Muted text colors raised to WCAG AA contrast in both themes: dark `neutral-500`/`neutral-600` are now `#9a9a9a`/`#808080` on the near-black canvas, light mode grays deepened to `#626d7a`/`#6d7683` on white, with the rest of the ramp nudged to keep hierarchy (`src/index.css`)
+- Landing headline now reads "The CRM built for agents on Convex", matching the og.png share image (`src/pages/Landing.tsx`)
+
+## [2.5.0] (2026-08-09)
+
+Notes and tasks, streamed Ask replies, full text search, themed form controls, sidebar collapse, and activity multi-select. Timestamp: 2026-08-09 08:45 UTC.
+
+### Added
+
+- Notes and tasks on companies and contacts: a shared composer with a note/task toggle, due date in days, an optional "email me a reminder" that routes through the selected email provider at the due time, and Complete buttons on open tasks (`src/components/Timeline.tsx`, `convex/model/activities.ts`)
+- `/task` and `/note` slash commands in Ask, handled in the send mutation with no AI key required: a company or contact name in the text links the record, "email me" schedules a reminder, "in N days" or "tomorrow" sets the due date, and a confirmation message lands in the thread (`convex/ask.ts`)
+- Streamed Ask replies: `ask.generate` uses `streamText` with saved deltas and the client renders them live through `useUIMessages` with `stream: true`
+- Full text search indexes (`search_name`) on companies, contacts, and deals; Command-K queries them first with the old bounded scan kept as a fallback for domain and email matches (`convex/schema.ts`, `convex/search.ts`)
+- Themed `Select`, `NumberInput`, and `Checkbox` primitives in `src/components/ui.tsx`; every native select and number spinner replaced (Deals stage menus, new deal form, Contacts and Companies filters, contact inline add, recheck days)
+- Sidebar collapse: Phosphor SidebarSimple icon in the sidebar header, floating reopen button when hidden, preference persisted per browser
+- Activity page multi-select: checkbox per row, select-all header, Clear selected via the new `logs.clearMany` mutation
+- Timeline writes (`activities:create`, `activities:completeTask`) now log to the Activity page, so record timelines and the log tell one story
+- Night-aware Ask greeting ("Up late." before 5am, "Working late." after 10pm)
+
+### Changed
+
+- `activities.create` accepts `remindMe` and shares its write path with the Ask slash commands (`convex/model/activities.ts`)
+- Compare page: workspace chat row mentions streaming and slash tasks; new notes and tasks row; search row mentions the full text indexes
+- Docs and README updated for all of the above
+
+## [2.4.0] (2026-08-09)
+
+Ask chat, activity log, Command-K, table upgrades, and multi-provider AI. Timestamp: 2026-08-09 08:05 UTC.
+
+### Added
+
+- Ask page (`/app/ask`): a Claude-style workspace chat with slash commands (`/search`, `/read`, `/crm`), a sub-sidebar of past chats with archive and delete, and the same web research tools the record chat uses (`convex/ask.ts`, `src/app/Ask.tsx`)
+- AI provider picker in Settings: OpenAI (`gpt-5-mini`), Claude (`claude-sonnet-4-5`), or OpenRouter; stored as `aiProvider` on the workspace; no key ships by default and the chat names the missing key (`convex/ai.ts`, `convex/prefs.ts`, `@ai-sdk/anthropic`)
+- Command-K search palette over companies, contacts, and deals, opened with the keyboard or the sidebar Search button (`convex/search.ts`, `src/components/CommandK.tsx`)
+- Activity page (`/app/activity`): a live dashboard-style log of function outcomes with pause and clear, wiped by the demo reset like everything else (`convex/logs.ts`, `src/app/Activity.tsx`)
+- Log events recorded from CRM mutations, agent task completion, email sends, demo resets, and chat generations
+- Sidebar drag-and-drop reordering, persisted on the workspace; Settings gained show/hide checkboxes per item (`sidebarOrder`, `sidebarHidden`)
+- Deals list view: sortable columns beside the existing board, with a board/list toggle
+- Drag-and-drop stage moves on the Deals board
+- Companies table: sortable headers, enrichment status filter, inline add row
+- Contacts table: sortable headers, company filter, inline add row
+- Fork link in the app sidebar; small "demo" badge next to the header wordmark
+- Docs: AI providers section, auth section rewritten around the [Convex auth overview](https://docs.convex.dev/auth/overview) with Clerk, WorkOS AuthKit, Auth0, and custom OIDC links, and an explicit note that the static hosting component is pre-configured
+
+### Changed
+
+- Landing page spacing tightened across every section; the Create agent button no longer stretches
+- Built with section gained a second row with OpenAI, Claude, and OpenRouter
+- Compare page gained rows for AI providers, workspace chat, search, and observability
+- README updated with the new features, env vars, and compare rows
+- `public/og.png` recaptured at 1200x630 from the new landing layout: hero reads "The CRM built for agents on Convex" with both built-with logo rows (Convex, React, Vite, context.dev, Firecrawl, AgentMail, Exa, OpenAI, Claude, OpenRouter) in frame
+
+## [2.3.0] (2026-08-09)
+
+Web research components, email provider toggle, docs page, and the Composio/Minimax theme pass. Timestamp: 2026-08-09 07:25 UTC.
+
+### Added
+
+- Firecrawl component (`@firecrawl/firecrawl-convex`): the record chat agent can read any web page as markdown through a `read_web_page` tool (`convex/web.ts`, `convex/chat.ts`)
+- Exa component (`@exalabs/convex-exa`): semantic web search as a `search_the_web` chat tool with the same keyless graceful degradation
+- AgentMail component (`@agentmail/convex`): persistent agent inbox, durable sending, and an inbound webhook at `/agentmail/webhook` (`convex/email.ts`, `convex/http.ts`)
+- Email provider toggle in Settings: pick Resend or AgentMail per workspace; stored as `emailProvider` on the workspace row and routed in `email.sendNotification`
+- `convex/capabilities.ts` query reporting which integrations have real keys; Settings shows live configured / not set badges
+- Docs page at `/docs`: fork and setup for non-devs, env var reference, email and web research setup, Convex Auth guide, production deploy with `--prod`, coding agent instructions, and the full component list; linked in the header, footer, and the app sidebar
+- Light mode (Minimax style) with a theme toggle in the landing header and the sidebar footer, persisted in localStorage and applied before first paint
+- Open Graph and Twitter card metadata in `index.html` with a 1200x630 dark mode share image at `public/og.png`
+- GitHub repo links (waynesutton/trycrm-convex) in the header, footer, fork section, and sidebar
+
+### Changed
+
+- Dark theme moved from the GitHub palette to the Composio pattern: near-black `#0f0f0f` canvas, achromatic surfaces, hairline borders, white CTA fill, `#51a2ff` links; light mode follows Minimax with a `#181e25` CTA and `#1456f0` links (`src/index.css`)
+- The palette utilities the app uses (white, neutral steps, badge tones) are declared as theme tokens and remapped under `html.light`, so every screen flips with the toggle
+- Built with section restacked: a larger Convex logo sits centered on its own row with React, Vite, context.dev, Firecrawl, AgentMail, and Exa on one line below; white marks invert to ink in light mode
+- Setup prompt now sets all three sentinel keys: `CONTEXT_DEV_API_KEY`, `FIRECRAWL_API_KEY`, `EXA_API_KEY`
+- Compare page gained rows for agent inbox, web scraping, and web search; the email row notes the provider toggle
+- README rewritten with the live demo links, the new components, the email section, and the updated deploy steps
+
 ## [2.2.0] (2026-08-08)
 
 GitHub design system restyle. Timestamp: 2026-08-09 06:37 UTC.

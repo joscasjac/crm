@@ -17,17 +17,26 @@ import staticHosting from "@convex-dev/static-hosting/convex.config";
 import workflow from "@convex-dev/workflow/convex.config";
 import workpool from "@convex-dev/workpool/convex.config";
 
-// Partner component. Same brand data vendor the upstream repo uses, so the
-// swap is like for like.
+// Partner components. Context.dev is the same brand data vendor the upstream
+// repo uses; Firecrawl, Exa, and AgentMail give agents web research and a
+// persistent inbox.
+import agentmail from "@agentmail/convex/convex.config";
 import contextDev from "@context-dot-dev/convex/convex.config";
+import exa from "@exalabs/convex-exa/convex.config";
+import firecrawl from "@firecrawl/firecrawl-convex/convex.config";
 
 const app = defineApp({
   env: {
-    // Brand data enrichment key. The component declares this required, so the
-    // app does too. Set a real key, or the literal string "unset" to run the
-    // demo without enrichment:
+    // These three components declare their keys required, so the app does
+    // too. Set a real key, or the literal string "unset" to run keyless:
     // npx convex env set CONTEXT_DEV_API_KEY unset
+    // npx convex env set FIRECRAWL_API_KEY unset
+    // npx convex env set EXA_API_KEY unset
     CONTEXT_DEV_API_KEY: v.string(),
+    FIRECRAWL_API_KEY: v.string(),
+    EXA_API_KEY: v.string(),
+    // Recommended when running Firecrawl crawls in webhook mode.
+    FIRECRAWL_WEBHOOK_SECRET: v.optional(v.string()),
   },
 });
 
@@ -53,11 +62,31 @@ app.use(rateLimiter);
 app.use(migrations);
 app.use(resend);
 
-// Brand data. The key is optional at the app level; enrichment reports
-// "not configured" when it is unset instead of failing the deploy.
+// Brand data. Enrichment reports "not configured" when the key is the
+// literal string "unset" instead of failing the deploy.
 app.use(contextDev, {
   env: { CONTEXT_DEV_API_KEY: app.env.CONTEXT_DEV_API_KEY },
 });
+
+// Web research for agents. Firecrawl scrapes and crawls pages; Exa runs
+// semantic web search. Both take the "unset" sentinel; the wrappers in
+// convex/web.ts refuse to call the vendors without a real key.
+app.use(firecrawl, {
+  // Mounts the crawl webhook at <deployment>.convex.site/firecrawl/webhook.
+  httpPrefix: "/firecrawl/",
+  env: {
+    FIRECRAWL_API_KEY: app.env.FIRECRAWL_API_KEY,
+    FIRECRAWL_WEBHOOK_SECRET: app.env.FIRECRAWL_WEBHOOK_SECRET,
+  },
+});
+app.use(exa, {
+  env: { EXA_API_KEY: app.env.EXA_API_KEY },
+});
+
+// Persistent email inbox for agents. Reads AGENTMAIL_API_KEY at runtime, so
+// nothing is required at deploy time. The inbound webhook is registered in
+// convex/http.ts at /agentmail/webhook.
+app.use(agentmail);
 
 // Dashboard rollups: pipeline value by stage, open deals by owner. Keeps the
 // dashboard summary at O(log n) instead of scanning the deals table.

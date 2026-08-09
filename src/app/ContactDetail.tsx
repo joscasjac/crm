@@ -3,15 +3,17 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { ComposeEmail } from "../components/ComposeEmail";
+import { TimelinePanel } from "../components/Timeline";
 import {
   Avatar,
   Badge,
   Button,
   EmptyState,
   Input,
+  NumberInput,
   Panel,
 } from "../components/ui";
-import { timeAgo } from "../lib/format";
 
 export function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>();
@@ -27,6 +29,7 @@ export function ContactDetail() {
   const [reason, setReason] = useState("");
   const [days, setDays] = useState("14");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   if (contact === undefined) {
     return <p className="text-sm text-neutral-500">Loading…</p>;
@@ -55,7 +58,7 @@ export function ContactDetail() {
     <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex items-center gap-3">
         <Avatar name={contact.name} src={contact.avatarUrl} size={40} />
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-white">{contact.name}</h1>
           <p className="text-sm text-neutral-500">
             {[contact.title, contact.email].filter(Boolean).join(" · ")}
@@ -72,7 +75,16 @@ export function ContactDetail() {
             ) : null}
           </p>
         </div>
+        <Button onClick={() => setComposeOpen(true)}>Email</Button>
       </div>
+
+      <ComposeEmail
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        defaultTo={contact.email ?? ""}
+        contactId={contact._id}
+        companyId={contact.companyId ?? undefined}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel className="p-4">
@@ -122,10 +134,10 @@ export function ContactDetail() {
               onChange={(e) => setReason(e.target.value)}
             />
             <div className="flex items-center gap-2">
-              <Input
-                type="number"
+              <NumberInput
                 value={days}
-                onChange={(e) => setDays(e.target.value)}
+                onChange={setDays}
+                min={1}
                 className="w-24"
               />
               <span className="text-sm text-neutral-500">days from now</span>
@@ -140,29 +152,10 @@ export function ContactDetail() {
         </Panel>
       </div>
 
-      <Panel className="mt-4">
-        <h3 className="border-b border-edge px-4 py-3 text-sm font-medium text-white">
-          Timeline
-        </h3>
-        {activities && activities.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-neutral-600">No activity yet</p>
-        ) : (
-          activities?.map((activity) => (
-            <div
-              key={activity._id}
-              className="border-b border-edge/60 px-4 py-3 text-sm last:border-0"
-            >
-              <div className="flex items-center justify-between">
-                <Badge>{activity.type}</Badge>
-                <span className="text-xs text-neutral-600">
-                  {timeAgo(activity._creationTime)}
-                </span>
-              </div>
-              <p className="mt-1 text-neutral-300">{activity.body}</p>
-            </div>
-          ))
-        )}
-      </Panel>
+      <div className="mt-4">
+        <h3 className="mb-3 text-sm font-medium text-white">Timeline</h3>
+        <TimelinePanel contactId={contact._id} activities={activities} />
+      </div>
     </div>
   );
 }

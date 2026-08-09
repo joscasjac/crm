@@ -5,6 +5,7 @@ import {
   trackDealInsert,
   trackDealReplace,
 } from "./aggregates";
+import { logEvent } from "./logs";
 import { deleteDealCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
 
@@ -82,6 +83,12 @@ export const create = writeMutation({
     const doc = await ctx.db.get("deals", dealId);
     if (doc) await trackDealInsert(ctx, doc);
     await ctx.db.patch("companies", args.companyId, { lastActivityAt: Date.now() });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "deals:create",
+      status: "success",
+      message: `Created ${args.name} at ${(args.amountMinor / 100).toLocaleString()} ${args.currency}`,
+    });
     return dealId;
   },
 });
@@ -143,6 +150,12 @@ export const changeStage = writeMutation({
       meta: { fromStage: oldDoc.stage, toStage: args.stage },
     });
     await ctx.db.patch("companies", oldDoc.companyId, { lastActivityAt: Date.now() });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "deals:changeStage",
+      status: "success",
+      message: `${oldDoc.name}: ${oldDoc.stage} → ${args.stage}`,
+    });
     return null;
   },
 });

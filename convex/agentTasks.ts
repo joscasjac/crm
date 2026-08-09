@@ -8,6 +8,7 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
+import { logEvent } from "./logs";
 import { writeMutation } from "./model/functions";
 
 const MAX_ATTEMPTS = 3;
@@ -143,6 +144,12 @@ export const completeInternal = internalMutation({
       finishedAt: Date.now(),
       result: args.result,
       leasedUntil: undefined,
+    });
+    await logEvent(ctx, {
+      kind: "A",
+      fn: `agentTasks:${task.kind}`,
+      status: args.state === "done" ? "success" : "error",
+      message: args.result,
     });
     return null;
   },

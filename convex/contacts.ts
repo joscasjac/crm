@@ -1,6 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { logEvent } from "./logs";
 import { deleteContactCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
 
@@ -76,13 +77,20 @@ export const create = writeMutation({
         throw new Error(`A contact with email ${args.email} already exists`);
       }
     }
-    return await ctx.db.insert("contacts", {
+    const contactId = await ctx.db.insert("contacts", {
       name: args.name,
       email: args.email,
       title: args.title,
       companyId: args.companyId,
       lastActivityAt: Date.now(),
     });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "contacts:create",
+      status: "success",
+      message: `Created ${args.name}`,
+    });
+    return contactId;
   },
 });
 

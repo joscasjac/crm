@@ -2,7 +2,7 @@
   "name": "trycrm-convex",
   "private": true,
   "license": "MIT",
-  "version": "2.0.0",
+  "version": "2.6.0",
   "description": "Comp AI CRM ported to Convex. One deployment: database, agent runtime, work queue, crons, file storage, and static hosting.",
   "type": "module",
   "scripts": {
@@ -16,6 +16,8 @@
     "seed": "npx convex run demo:seedPublic"
   },
   "dependencies": {
+    "@agentmail/convex": "^0.1.0",
+    "@ai-sdk/anthropic": "^3.0.107",
     "@ai-sdk/openai": "^3.0.0",
     "@context-dot-dev/convex": "latest",
     "@convex-dev/action-cache": "latest",
@@ -29,6 +31,8 @@
     "@convex-dev/static-hosting": "latest",
     "@convex-dev/workflow": "latest",
     "@convex-dev/workpool": "latest",
+    "@exalabs/convex-exa": "^0.1.1",
+    "@firecrawl/firecrawl-convex": "^0.1.1",
     "@fontsource-variable/mona-sans": "^5.3.0",
     "ai": "^6.0.35",
     "convex": "^1.31.0",

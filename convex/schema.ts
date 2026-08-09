@@ -48,6 +48,31 @@ export default defineSchema({
     reportingCurrency: v.string(),
     agentModel: v.string(),
     lastResetAt: v.number(),
+    // Which provider outbound notifications use. Resend is the default;
+    // AgentMail adds a persistent inbox agents can also receive on. Optional
+    // so existing rows keep working; undefined means "resend".
+    emailProvider: v.optional(
+      v.union(v.literal("resend"), v.literal("agentmail")),
+    ),
+    // Compose email configuration: the from identity and a signature that
+    // appends to every outbound message. All optional; sends fall back to
+    // a generic from line until these are set.
+    emailFromName: v.optional(v.string()),
+    emailFromAddress: v.optional(v.string()),
+    emailSignature: v.optional(v.string()),
+    // Which model provider the chat surfaces use. All optional keys; the
+    // reply names the missing key when the chosen provider is not configured.
+    aiProvider: v.optional(
+      v.union(
+        v.literal("openai"),
+        v.literal("anthropic"),
+        v.literal("openrouter"),
+      ),
+    ),
+    // Sidebar personalization: item ids in display order, and ids hidden by
+    // the Settings page. Both reset with the demo like everything else.
+    sidebarOrder: v.optional(v.array(v.string())),
+    sidebarHidden: v.optional(v.array(v.string())),
   }),
 
   // Workspace members. Demo seeds these; with Convex Auth enabled this table
@@ -71,7 +96,8 @@ export default defineSchema({
     lastActivityAt: v.optional(v.number()),
   })
     .index("by_domain", ["domain"])
-    .index("by_name", ["name"]),
+    .index("by_name", ["name"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   contacts: defineTable({
     name: v.string(),
@@ -83,7 +109,8 @@ export default defineSchema({
     lastActivityAt: v.optional(v.number()),
   })
     .index("by_company", ["companyId"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   deals: defineTable({
     name: v.string(),
@@ -99,7 +126,8 @@ export default defineSchema({
   })
     .index("by_company", ["companyId"])
     .index("by_stage", ["stage"])
-    .index("by_owner", ["ownerId"]),
+    .index("by_owner", ["ownerId"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   // Timeline entries for companies, contacts, and deals.
   activities: defineTable({
@@ -276,6 +304,30 @@ export default defineSchema({
       v.literal("rejected"),
     ),
   }).index("by_entityId", ["entityId"]),
+
+  // Workspace-wide Ask chats, mapped to Agent component threads. Unlike
+  // chatThreads these are not tied to a record: archive and delete are
+  // first-class, like a chat app.
+  askThreads: defineTable({
+    threadId: v.string(),
+    title: v.string(),
+    archived: v.boolean(),
+    lastMessageAt: v.number(),
+  }).index("by_threadId", ["threadId"]),
+
+  // The activity log the Activity page renders, in the shape of the Convex
+  // dashboard logs: one row per notable function outcome. Bounded by the
+  // demo reset and the Clear button.
+  logEvents: defineTable({
+    kind: v.union(v.literal("M"), v.literal("A"), v.literal("C")),
+    fn: v.string(),
+    status: v.union(
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("info"),
+    ),
+    message: v.string(),
+  }),
 
   // Per-record agent chat threads, mapped to Agent component threads.
   chatThreads: defineTable({

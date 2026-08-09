@@ -52,7 +52,7 @@ export function Agents() {
           Describe how your CRM should act. The description becomes a draft
           agent with versioned instructions.
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Input
             placeholder="Send a summary to the owner when a deal stalls for a week"
             value={description}

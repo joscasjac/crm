@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { logEvent } from "./logs";
+import { clip, insertActivity } from "./model/activities";
 import { activityType } from "./schema";
 import { writeMutation } from "./model/functions";
 
@@ -70,6 +72,10 @@ export const openTasks = query({
   },
 });
 
+// Create a note or task on a record. Every write also lands in logEvents so
+// the record timeline and the Activity page tell the same story. Tasks can
+// schedule an email reminder at the due time through whichever provider the
+// workspace selected; when none is configured the send logs a skip instead.
 export const create = writeMutation({
   args: {
     type: activityType,
@@ -78,19 +84,11 @@ export const create = writeMutation({
     contactId: v.optional(v.id("contacts")),
     dealId: v.optional(v.id("deals")),
     dueAt: v.optional(v.number()),
+    remindMe: v.optional(v.boolean()),
   },
   returns: v.id("activities"),
   handler: async (ctx, args) => {
-    if (args.body.trim().length === 0) {
-      throw new Error("Write something first");
-    }
-    const id = await ctx.db.insert("activities", args);
-    if (args.companyId) {
-      await ctx.db.patch("companies", args.companyId, { lastActivityAt: Date.now() });
-    }
-    if (args.contactId) {
-      await ctx.db.patch("contacts", args.contactId, { lastActivityAt: Date.now() });
-    }
+    const { id } = await insertActivity(ctx, args);
     return id;
   },
 });
@@ -105,6 +103,12 @@ export const completeTask = writeMutation({
     }
     if (activity.completedAt) return null;
     await ctx.db.patch("activities", args.activityId, { completedAt: Date.now() });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "activities:completeTask",
+      status: "success",
+      message: `Task completed: ${clip(activity.body)}`,
+    });
     return null;
   },
 });

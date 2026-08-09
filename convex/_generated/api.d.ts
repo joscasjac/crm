@@ -12,6 +12,9 @@ import type * as activities from "../activities.js";
 import type * as agentTasks from "../agentTasks.js";
 import type * as agents from "../agents.js";
 import type * as aggregates from "../aggregates.js";
+import type * as ai from "../ai.js";
+import type * as ask from "../ask.js";
+import type * as capabilities from "../capabilities.js";
 import type * as chat from "../chat.js";
 import type * as companies from "../companies.js";
 import type * as contacts from "../contacts.js";
@@ -23,12 +26,17 @@ import type * as email from "../email.js";
 import type * as enrichment from "../enrichment.js";
 import type * as fields from "../fields.js";
 import type * as http from "../http.js";
+import type * as logs from "../logs.js";
 import type * as model_access from "../model/access.js";
+import type * as model_activities from "../model/activities.js";
 import type * as model_cascade from "../model/cascade.js";
 import type * as model_functions from "../model/functions.js";
 import type * as model_seed from "../model/seed.js";
+import type * as prefs from "../prefs.js";
+import type * as search from "../search.js";
 import type * as staticHosting from "../staticHosting.js";
 import type * as users from "../users.js";
+import type * as web from "../web.js";
 
 import type {
   ApiFromModules,
@@ -41,6 +49,9 @@ declare const fullApi: ApiFromModules<{
   agentTasks: typeof agentTasks;
   agents: typeof agents;
   aggregates: typeof aggregates;
+  ai: typeof ai;
+  ask: typeof ask;
+  capabilities: typeof capabilities;
   chat: typeof chat;
   companies: typeof companies;
   contacts: typeof contacts;
@@ -52,12 +63,17 @@ declare const fullApi: ApiFromModules<{
   enrichment: typeof enrichment;
   fields: typeof fields;
   http: typeof http;
+  logs: typeof logs;
   "model/access": typeof model_access;
+  "model/activities": typeof model_activities;
   "model/cascade": typeof model_cascade;
   "model/functions": typeof model_functions;
   "model/seed": typeof model_seed;
+  prefs: typeof prefs;
+  search: typeof search;
   staticHosting: typeof staticHosting;
   users: typeof users;
+  web: typeof web;
 }>;
 
 /**
@@ -100,6 +116,9 @@ export declare const components: {
   migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
   contextDev: import("@context-dot-dev/convex/_generated/component.js").ComponentApi<"contextDev">;
+  firecrawl: import("@firecrawl/firecrawl-convex/_generated/component.js").ComponentApi<"firecrawl">;
+  exa: import("@exalabs/convex-exa/_generated/component.js").ComponentApi<"exa">;
+  agentmail: import("@agentmail/convex/_generated/component.js").ComponentApi<"agentmail">;
   dealsByStage: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"dealsByStage">;
   dealsByOwner: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"dealsByOwner">;
 };

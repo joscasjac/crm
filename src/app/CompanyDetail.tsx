@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { ComposeEmail } from "../components/ComposeEmail";
+import { TimelinePanel } from "../components/Timeline";
 import {
   Avatar,
   Badge,
@@ -13,7 +15,7 @@ import {
   Input,
   Panel,
 } from "../components/ui";
-import { formatMoney, stageLabel, timeAgo } from "../lib/format";
+import { formatMoney, stageLabel } from "../lib/format";
 import { EnrichmentBadge } from "./Companies";
 
 const TABS = ["Overview", "Contacts", "Deals", "Activity", "Agent"] as const;
@@ -30,6 +32,7 @@ export function CompanyDetail() {
   const remove = useMutation(api.companies.remove);
   const [tab, setTab] = useState<Tab>("Overview");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   if (company === undefined) {
     return <p className="text-sm text-neutral-500">Loading…</p>;
@@ -54,6 +57,7 @@ export function CompanyDetail() {
           <EnrichmentBadge status={company.enrichmentStatus} />
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => setComposeOpen(true)}>Email</Button>
           <Button
             onClick={() =>
               void reEnrich({ companyId: company._id }).catch(() => undefined)
@@ -140,6 +144,15 @@ export function CompanyDetail() {
       {tab === "Deals" ? <DealsTab company={company} /> : null}
       {tab === "Activity" ? <ActivityTab companyId={company._id} /> : null}
       {tab === "Agent" ? <AgentTab companyId={company._id} /> : null}
+
+      <ComposeEmail
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        defaultTo={
+          company.primaryContact?.email ?? company.contacts[0]?.email ?? ""
+        }
+        companyId={company._id}
+      />
     </div>
   );
 }
@@ -242,52 +255,12 @@ function DealsTab({ company }: { company: CompanyData }) {
   );
 }
 
+// Notes and tasks on this company, shared with contact detail. Tasks take a
+// due date and an optional email reminder; everything also lands on the
+// Activity page.
 function ActivityTab({ companyId }: { companyId: Id<"companies"> }) {
   const activities = useQuery(api.activities.forCompany, { companyId });
-  const create = useMutation(api.activities.create);
-  const [note, setNote] = useState("");
-
-  const addNote = async () => {
-    if (!note.trim()) return;
-    await create({ type: "NOTE", body: note.trim(), companyId });
-    setNote("");
-  };
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        <Input
-          placeholder="Log a note on the timeline"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void addNote()}
-        />
-        <Button variant="primary" onClick={() => void addNote()}>
-          Add
-        </Button>
-      </div>
-      {activities && activities.length === 0 ? (
-        <EmptyState message="No activity yet" />
-      ) : (
-        <Panel>
-          {activities?.map((activity) => (
-            <div
-              key={activity._id}
-              className="border-b border-edge/60 px-4 py-3 text-sm last:border-0"
-            >
-              <div className="flex items-center justify-between">
-                <Badge>{activity.type}</Badge>
-                <span className="text-xs text-neutral-600">
-                  {timeAgo(activity._creationTime)}
-                </span>
-              </div>
-              <p className="mt-1 text-neutral-300">{activity.body}</p>
-            </div>
-          ))}
-        </Panel>
-      )}
-    </div>
-  );
+  return <TimelinePanel companyId={companyId} activities={activities} />;
 }
 
 // The agent tab: chat with the record, see queued work and rechecks.

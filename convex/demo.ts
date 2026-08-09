@@ -6,6 +6,7 @@ import {
   query,
 } from "./_generated/server";
 import { dealsByOwner, dealsByStage } from "./aggregates";
+import { logEvent } from "./logs";
 import { seedAll } from "./model/seed";
 
 const TABLES = [
@@ -23,6 +24,8 @@ const TABLES = [
   "agentRuns",
   "facts",
   "chatThreads",
+  "askThreads",
+  "logEvents",
 ] as const;
 
 // Wipe everything and reseed. Runs on a cron every ten minutes in demo mode,
@@ -40,6 +43,12 @@ export const reset = internalMutation({
     await dealsByStage.clearAll(ctx);
     await dealsByOwner.clearAll(ctx);
     await seedAll(ctx, Date.now());
+    await logEvent(ctx, {
+      kind: "C",
+      fn: "demo:reset",
+      status: "success",
+      message: "Demo content wiped and reseeded",
+    });
     return null;
   },
 });

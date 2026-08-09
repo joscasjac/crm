@@ -43,7 +43,55 @@ const ROWS: Array<Row> = [
     area: "Email",
     upstream: "Resend SDK calls",
     convex:
-      "Resend component with durable batching; unconfigured on the demo",
+      "Resend or AgentMail components, switchable in Settings; unconfigured on the demo",
+  },
+  {
+    area: "Agent inbox",
+    upstream: "Not included",
+    convex:
+      "AgentMail component: persistent inbox with threads synced into Convex tables",
+  },
+  {
+    area: "Web scraping",
+    upstream: "Not included",
+    convex:
+      "Firecrawl component: the chat agent can read any web page as markdown",
+  },
+  {
+    area: "Web search",
+    upstream: "Not included",
+    convex:
+      "Exa component: semantic web search as a tool the chat agent can call",
+  },
+  {
+    area: "AI providers",
+    upstream: "OpenAI",
+    convex:
+      "OpenAI, Claude, or OpenRouter, switchable in Settings. No key ships by default; the chat names the key it needs",
+  },
+  {
+    area: "Workspace chat",
+    upstream: "Per-record chat only",
+    convex:
+      "Ask page: a Claude-style chat over the whole CRM with streamed replies, slash commands including /task and /note, archived threads, and web research tools",
+  },
+  {
+    area: "Notes and tasks",
+    upstream: "Notes on records",
+    convex:
+      "Notes and tasks on every company and contact, with due dates, email reminders through the selected provider, and completion tracked on the timeline",
+  },
+  {
+    area: "Search",
+    upstream: "Per-table search inputs",
+    convex:
+      "Command-K palette backed by Convex full text search indexes, so it scales past demo size",
+  },
+  {
+    area: "Observability",
+    upstream: "Server logs",
+    convex:
+      "Activity page streams function outcomes live, dashboard-style, with pause, select one or all, and clear",
   },
   {
     area: "Brand enrichment",
@@ -135,7 +183,7 @@ export function Compare() {
         <div className="mt-8 text-center">
           <Link
             to="/app"
-            className="rounded-md bg-primary px-4 py-2 text-sm text-white transition-colors hover:bg-primary-hover"
+            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-ink transition-colors hover:bg-primary-hover"
           >
             Try the demo
           </Link>

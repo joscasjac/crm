@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai";
 import {
   Agent,
   createThread,
@@ -17,6 +16,12 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
+import type { AiProvider } from "./ai";
+import {
+  languageModelFor,
+  missingKeyMessage,
+  providerConfigured,
+} from "./ai";
 import { writeMutation } from "./model/functions";
 
 // The one tool the record chat needs with zero keys: read our own history.
@@ -35,17 +40,54 @@ const readCrmHistory = createTool({
   },
 });
 
-const crmAgent = new Agent(components.agent, {
-  name: "CRM Research Agent",
-  languageModel: openai.chat("gpt-5-mini"),
-  instructions: [
-    "You are the research agent inside an agentic CRM.",
-    "Nothing about a person is guessed. Report what you observed and name the evidence, like crm.signature-block or crm.thread-reply.",
-    "If you do not have the data, say so plainly. A blank field beats a confidently wrong one.",
-    "Answer briefly and show your working.",
-  ].join(" "),
-  tools: { read_crm_history: readCrmHistory },
+// Web research through the Firecrawl and Exa components. Both degrade
+// honestly: without a real key the tool returns a "not configured" note the
+// agent repeats to the user instead of guessing.
+const searchTheWeb = createTool({
+  description:
+    "Search the web for recent information about a company or person. Returns titles, URLs, and highlights.",
+  inputSchema: z.object({
+    query: z.string().describe("What to search the web for"),
+  }),
+  execute: async (ctx, input): Promise<string> => {
+    return await ctx.runAction(internal.web.searchWeb, {
+      query: input.query,
+    });
+  },
 });
+
+const readWebPage = createTool({
+  description:
+    "Fetch a specific web page and return its main content as markdown.",
+  inputSchema: z.object({
+    url: z.string().describe("The full URL of the page to read"),
+  }),
+  execute: async (ctx, input): Promise<string> => {
+    return await ctx.runAction(internal.web.scrapePage, { url: input.url });
+  },
+});
+
+const INSTRUCTIONS = [
+  "You are the research agent inside an agentic CRM.",
+  "Nothing about a person is guessed. Report what you observed and name the evidence, like crm.signature-block or crm.thread-reply.",
+  "If you do not have the data, say so plainly. A blank field beats a confidently wrong one.",
+  "You may search the web or read a page when the CRM history is not enough. If a web tool reports it is not configured, tell the user which key enables it.",
+  "Answer briefly and show your working.",
+].join(" ");
+
+// The model comes from the workspace's AI provider setting, so the agent is
+// built per call rather than at module scope.
+const makeCrmAgent = (provider: AiProvider) =>
+  new Agent(components.agent, {
+    name: "CRM Research Agent",
+    languageModel: languageModelFor(provider),
+    instructions: INSTRUCTIONS,
+    tools: {
+      read_crm_history: readCrmHistory,
+      search_the_web: searchTheWeb,
+      read_web_page: readWebPage,
+    },
+  });
 
 // Everything the agent may read about a record, flattened to text for the
 // tool call.
@@ -165,14 +207,17 @@ export const generate = internalAction({
   handler: async (ctx, args) => {
     // The capability preamble in one sentence: without a model key the tab
     // says so instead of pretending.
-    if (!process.env.OPENAI_API_KEY) {
+    const provider: AiProvider = await ctx.runQuery(
+      internal.ask.providerInternal,
+      {},
+    );
+    if (!providerConfigured(provider)) {
       await saveMessage(ctx, components.agent, {
         threadId: args.threadId,
         agentName: "CRM Research Agent",
         message: {
           role: "assistant",
-          content:
-            "No model key is configured on this demo, so I cannot reason over the record. Set OPENAI_API_KEY on the deployment and ask again. I can still show you the timeline, facts, and scheduled rechecks on this tab.",
+          content: missingKeyMessage(provider),
         },
       });
       return null;
@@ -180,16 +225,15 @@ export const generate = internalAction({
     const history = await ctx.runQuery(internal.chat.recordHistory, {
       companyId: args.companyId,
     });
+    const crmAgent = makeCrmAgent(provider);
     await crmAgent.generateText(
       ctx,
       { threadId: args.threadId },
       {
         promptMessageId: args.promptMessageId,
-        system: [
-          crmAgent.options.instructions,
-          "Current record context:",
-          history,
-        ].join("\n\n"),
+        system: [INSTRUCTIONS, "Current record context:", history].join(
+          "\n\n",
+        ),
         stopWhen: stepCountIs(5),
       },
     );

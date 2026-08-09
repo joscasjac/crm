@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { query } from "./_generated/server";
+import { logEvent } from "./logs";
 import { deleteCompanyCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
 
@@ -134,6 +135,12 @@ export const create = writeMutation({
         attempts: 0,
       });
     }
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "companies:create",
+      status: "success",
+      message: `Created ${args.name}${args.domain ? ` (${args.domain}), enrichment queued` : ""}`,
+    });
     return companyId;
   },
 });
@@ -164,7 +171,14 @@ export const remove = writeMutation({
   args: { companyId: v.id("companies") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const company = await ctx.db.get("companies", args.companyId);
     await deleteCompanyCascade(ctx, args.companyId);
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "companies:remove",
+      status: "success",
+      message: `Deleted ${company?.name ?? "company"} and its related rows`,
+    });
     return null;
   },
 });

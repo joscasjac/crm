@@ -26,6 +26,9 @@ import type { DataModel } from "./dataModel.js";
  */
 type Env = {
   readonly CONTEXT_DEV_API_KEY: string;
+  readonly EXA_API_KEY: string;
+  readonly FIRECRAWL_API_KEY: string;
+  readonly FIRECRAWL_WEBHOOK_SECRET: string | undefined;
 };
 
 /**
