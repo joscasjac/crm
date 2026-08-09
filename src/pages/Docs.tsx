@@ -687,22 +687,22 @@ npx @convex-dev/auth`}</Code>
               configure anything for it.
             </p>
             <p>
-              <span className="text-white">First,</span> push the backend to
-              production. This is the one time you use <K>deploy</K> instead
-              of <K>dev</K>:
-            </p>
-            <Code>{`npx convex deploy`}</Code>
-            <p>
-              <span className="text-white">Then,</span> set the required
-            variables on production (they are separate from dev) and build and
-              upload the site:
+              <span className="text-white">First,</span> set the required
+              variables on production. Dev and production hold separate
+              variables, so the values you set during setup do not carry
+              over; a production push without these fails with a
+              MissingEnvironmentVariables error:
             </p>
             <Code>{`npx convex env set CONTEXT_DEV_API_KEY unset --prod
 npx convex env set FIRECRAWL_API_KEY unset --prod
-npx convex env set EXA_API_KEY unset --prod
-
-npm run build
-npm run deploy`}</Code>
+npx convex env set EXA_API_KEY unset --prod`}</Code>
+            <p>
+              <span className="text-white">Then,</span> deploy. One command
+              builds the frontend, pushes the backend to production, and
+              uploads the site. This is the one time you use production
+              commands instead of <K>dev</K>:
+            </p>
+            <Code>{`npm run deploy`}</Code>
             <p>
               <K>npm run deploy</K> uploads the built files from{" "}
               <K>dist/</K> into Convex file storage and serves them at your{" "}

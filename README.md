@@ -127,21 +127,21 @@ Write access runs through one wrapper built on [`convex-helpers`](https://github
 
 ## Deploying to Convex cloud
 
-One deployment serves the backend and the site. From a configured project:
-
-```bash
-npm run deploy
-```
-
-That runs `npx @convex-dev/static-hosting deploy`, which does the whole thing in one shot: builds the frontend with the production Convex URL, deploys the Convex backend, and uploads the built files to Convex storage.
-
-Before the first production deploy, set the env vars on production (they are separate from dev):
+One deployment serves the backend and the site. Before the first production deploy, set the required env vars on production. They are separate from dev, so the values you set during setup do not carry over, and the push fails with `MissingEnvironmentVariables` without them:
 
 ```bash
 npx convex env set CONTEXT_DEV_API_KEY unset --prod
 npx convex env set FIRECRAWL_API_KEY unset --prod
 npx convex env set EXA_API_KEY unset --prod
 ```
+
+Then, from a configured project:
+
+```bash
+npm run deploy
+```
+
+That runs `npx @convex-dev/static-hosting deploy`, which does the whole thing in one shot: builds the frontend with the production Convex URL, deploys the Convex backend, and uploads the built files to Convex storage.
 
 Your site is then live at your deployment's `.convex.site` URL, which the Convex dashboard shows under Settings. The static hosting component handles SPA routing, hashed asset caching, and garbage collection of old builds. Deploys are atomic; clients subscribed through the deployment query can offer a refresh when a new build ships.
 

@@ -27,11 +27,13 @@ import firecrawl from "@firecrawl/firecrawl-convex/convex.config";
 
 const app = defineApp({
   env: {
-    // These three components declare their keys required, so the app does
-    // too. Set a real key, or the literal string "unset" to run keyless:
-    // npx convex env set CONTEXT_DEV_API_KEY unset
-    // npx convex env set FIRECRAWL_API_KEY unset
-    // npx convex env set EXA_API_KEY unset
+    // These three components declare their keys required, so the app must
+    // too: Convex rejects binding a required component var to an optional
+    // app var. Set a real key, or the literal string "unset" to run
+    // keyless, on every deployment (dev and prod have separate variables):
+    // npx convex env set CONTEXT_DEV_API_KEY unset [--prod]
+    // npx convex env set FIRECRAWL_API_KEY unset [--prod]
+    // npx convex env set EXA_API_KEY unset [--prod]
     CONTEXT_DEV_API_KEY: v.string(),
     FIRECRAWL_API_KEY: v.string(),
     EXA_API_KEY: v.string(),

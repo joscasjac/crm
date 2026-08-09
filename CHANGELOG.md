@@ -13,6 +13,11 @@ Context.dev as a second provider for web search and web scraping. Timestamp: 202
 - Settings integration rows, the Compare page web search and scraping rows, the docs web research section and environment variable table, and the README now describe both providers per tool and the fallback order (`src/app/Settings.tsx`, `src/pages/Compare.tsx`, `src/pages/Docs.tsx`, `README.md`)
 - Not-configured tool replies now name both keys that can turn the feature on, for example "Set EXA_API_KEY or CONTEXT_DEV_API_KEY to enable it"
 
+### Fixed
+
+- Prod deploy failing with `MissingEnvironmentVariables: EXA_API_KEY, FIRECRAWL_API_KEY` by setting the `unset` sentinels on the production deployment; dev and prod hold separate variables, so the sentinels must be set with `--prod` too. Making the app env vars optional does not work: Convex rejects binding a required component var to an optional app var, and the `convex/convex.config.ts` comment now explains this (2026-08-09 10:50 UTC)
+- The docs deploy section and the README deploy section now put the `--prod` env commands before the deploy command; the old order ran the push first, which fails on a fresh production deployment (2026-08-09 10:55 UTC)
+
 ## [2.7.0] (2026-08-09)
 
 A 20 second demo video on the landing page. Timestamp: 2026-08-09 10:00 UTC.
