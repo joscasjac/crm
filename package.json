@@ -1,42 +1,58 @@
 {
-	"name": "crm",
-	"private": true,
-	"license": "MIT",
-	"version": "1.5.0",
-	"scripts": {
-		"prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
-		"build": "turbo run build",
-		"dev": "turbo run dev",
-		"lint": "turbo run lint",
-		"format": "biome format --write .",
-		"check-types": "turbo run check-types",
-		"test": "turbo run test",
-		"auth:generate": "turbo run auth:generate",
-		"db:deploy": "turbo run db:deploy",
-		"db:generate": "turbo run db:generate",
-		"db:migrate": "turbo run db:migrate",
-		"db:push": "turbo run db:push",
-		"db:reset": "turbo run db:reset",
-		"db:seed": "turbo run db:seed",
-		"db:studio": "turbo run db:studio"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.10",
-		"turbo": "^2.10.8",
-		"typescript": "5.9.2"
-	},
-	"engines": {
-		"node": ">=22"
-	},
-	"packageManager": "bun@1.3.12",
-	"devEngines": {
-		"packageManager": {
-			"name": "bun",
-			"version": "1.3.12"
-		}
-	},
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	]
+  "name": "trycrm-convex",
+  "private": true,
+  "license": "MIT",
+  "version": "2.0.0",
+  "description": "Comp AI CRM ported to Convex. One deployment: database, agent runtime, work queue, crons, file storage, and static hosting.",
+  "type": "module",
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:frontend dev:backend",
+    "dev:frontend": "vite",
+    "dev:backend": "convex dev",
+    "build": "tsc -p tsconfig.app.json --noEmit && vite build",
+    "check-types": "tsc -p tsconfig.app.json --noEmit && tsc -p convex --noEmit",
+    "lint": "eslint .",
+    "deploy": "npx @convex-dev/static-hosting deploy",
+    "seed": "npx convex run demo:seedPublic"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.0",
+    "@context-dot-dev/convex": "latest",
+    "@convex-dev/action-cache": "latest",
+    "@convex-dev/action-retrier": "latest",
+    "@convex-dev/agent": "latest",
+    "@convex-dev/aggregate": "latest",
+    "@convex-dev/crons": "latest",
+    "@convex-dev/migrations": "latest",
+    "@convex-dev/rate-limiter": "latest",
+    "@convex-dev/resend": "latest",
+    "@convex-dev/static-hosting": "latest",
+    "@convex-dev/workflow": "latest",
+    "@convex-dev/workpool": "latest",
+    "@fontsource-variable/mona-sans": "^5.3.0",
+    "ai": "^6.0.35",
+    "convex": "^1.31.0",
+    "convex-helpers": "latest",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@convex-dev/eslint-plugin": "^3.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^10.8.1",
+    "npm-run-all": "^4.1.5",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.66.0",
+    "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

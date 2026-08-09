@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@import "@fontsource-variable/mona-sans";
+
+/* Design tokens from the GitHub features design system: dark-mode-native
+   canvas, one cobalt conversion color, hairline borders, chroma-shift depth.
+   ink = canvas, panel = canvas-soft, raised = canvas-raised, edge = hairline,
+   primary = cobalt button fill, accent = link tone for dark surfaces. */
+@theme {
+  --color-ink: #0d1117;
+  --color-panel: #161b22;
+  --color-raised: #21262d;
+  --color-edge: #30363d;
+  --color-edge-strong: #6e7681;
+  --color-primary: #1f6feb;
+  --color-primary-hover: #388bfd;
+  --color-accent: #58a6ff;
+  --color-glow: #2d1b69;
+  --font-sans:
+    "Mona Sans Variable", -apple-system, system-ui, "Segoe UI", "Noto Sans",
+    Helvetica, Arial, sans-serif;
+}
+
+html {
+  background: var(--color-ink);
+  color: #d2d9d4;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(31, 111, 235, 0.35);
+}
+
+/* Thin dark scrollbars to match the shell */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #30363d transparent;
+}

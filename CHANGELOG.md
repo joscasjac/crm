@@ -1,5 +1,73 @@
 # Changelog
 
+## [2.2.0] (2026-08-08)
+
+GitHub design system restyle. Timestamp: 2026-08-09 06:37 UTC.
+
+### Added
+
+- Mona Sans variable font via @fontsource-variable/mona-sans
+- White React and Vite SVG logos in `public/logos/` for the Built with wall
+
+### Changed
+
+- Theme tokens moved to the GitHub features palette: `#0d1117` canvas, `#161b22` panel, `#21262d` raised, `#30363d` hairline borders, cobalt `#1f6feb` primary button, `#58a6ff` link accent (`src/index.css`)
+- Corner radii tightened across the landing page and app: buttons and inputs `rounded-md`, panels `rounded-lg`, no more `rounded-xl`
+- Header and sidebar now say "CRM on Convex" as text; the Convex logo moved to the Built with section alongside white React, Vite, and context.dev marks
+- Primary buttons are cobalt with white text instead of the emerald accent fill
+- Hero gained a purple radial glow behind a cobalt primary CTA, matching the GitHub features layout
+
+### Removed
+
+- Reset now button from the demo banner; resets are cron only
+
+### Fixed
+
+- Cloud deploy error `MissingEnvironmentVariables: CONTEXT_DEV_API_KEY` by setting the variable on the dev deployment (`npx convex env set CONTEXT_DEV_API_KEY unset`); the copy prompt and docs keep the "unset" sentinel for people cloning the repo
+
+## [2.1.0] (2026-08-08)
+
+Lint and helpers pass. Timestamp: 2026-08-09 06:05 UTC.
+
+### Added
+
+- ESLint 9 flat config with the Convex plugin recommended rules and type aware typescript-eslint (`eslint.config.js`, `npm run lint`)
+- `writeMutation` custom mutation in `convex/model/functions.ts`, built on convex-helpers; the write access check now runs once in the wrapper instead of by hand in every mutation
+
+### Changed
+
+- All database `get`, `patch`, `replace`, and `delete` calls now pass the table name explicitly, per the `explicit-table-ids` rule
+- All public mutations in companies, contacts, deals, activities, fields, agents, agentTasks, and chat now use `writeMutation`
+
+## [2.0.0] (2026-08-08)
+
+Full port to Convex. Timestamp: 2026-08-09 05:45 UTC.
+
+### Added
+
+- Single Convex deployment replaces the Turborepo monorepo: `convex/` backend plus `src/` Vite React frontend, npm instead of bun
+- Convex components: static-hosting, agent, workflow, workpool (three pools), crons, action-retrier, action-cache, rate-limiter, aggregate (two instances), migrations, resend, and the Context.dev partner component
+- Demo mode with a 10 minute reset cron, live countdown banner, and self-seeding workspace
+- Landing page served by static hosting with a Try the demo button, copy prompt button, and Convex branding
+- Compare page at `/compare` contrasting the upstream stack with this port
+- Record chat backed by the agent component, with honest degradation when no model key is set
+- Agents that build agents: draft definitions with versioned instructions, deploy as a pointer move
+- Evidence ledger, scheduled rechecks with required reasons, and Context.dev enrichment with a 7 day action cache
+
+### Changed
+
+- Hosting moved from Vercel to the Convex static hosting component
+- Database moved from Postgres and Prisma to the Convex database
+- Queues moved from Redis workers to workpool components with the queue as a table
+- Auth moved from Better Auth to a Convex Auth ready layout, disabled in the demo
+- README rewritten for the Convex version, including the deploy guide
+
+### Removed
+
+- Vercel, Postgres, Prisma, Redis, Better Auth, NestJS API, Next.js, bun, Turborepo
+
+Upstream changelog continues below.
+
 ## [1.5.0](https://github.com/trycompai/crm/compare/v1.4.0...v1.5.0) (2026-08-08)
 
 
