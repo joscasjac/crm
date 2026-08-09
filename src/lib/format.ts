@@ -19,6 +19,18 @@ export function timeAgo(timestamp: number): string {
   return `${days}d ago`;
 }
 
+// "Aug 15", with the year added only when it differs from the current one.
+export function shortDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const label = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  return date.getFullYear() === new Date().getFullYear()
+    ? label
+    : `${label}, ${date.getFullYear()}`;
+}
+
 const STAGE_LABELS: Record<string, string> = {
   QUALIFIED: "Qualified",
   MEETING: "Meeting",

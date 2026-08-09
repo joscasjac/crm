@@ -2,6 +2,15 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
+import type { Doc } from "../../convex/_generated/dataModel";
+import {
+  ColumnsButton,
+  FieldCell,
+  HeaderCell,
+  useEntityTable,
+  useStickyColumns,
+} from "../components/dataTable";
+import type { StickyColumns } from "../components/dataTable";
 import {
   Badge,
   Button,
@@ -11,17 +20,15 @@ import {
   Panel,
   Select,
 } from "../components/ui";
+import { COMPANY_COLUMNS } from "../lib/columns";
+import type { ResolvedColumn } from "../lib/columns";
 import { timeAgo } from "../lib/format";
-import { SortHeader } from "./Deals";
 
-type SortKey =
-  | "name"
-  | "domain"
-  | "industry"
-  | "enrichmentStatus"
-  | "contactCount"
-  | "dealCount"
-  | "lastActivityAt";
+type CompanyRow = Doc<"companies"> & {
+  contactCount: number;
+  dealCount: number;
+  logoUrl?: string | null;
+};
 
 const ENRICHMENT_FILTERS = [
   "ALL",
@@ -36,7 +43,7 @@ export function Companies() {
   const [showNew, setShowNew] = useState(false);
   const [enrichmentFilter, setEnrichmentFilter] =
     useState<(typeof ENRICHMENT_FILTERS)[number]>("ALL");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortKey, setSortKey] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const { results, status, loadMore } = usePaginatedQuery(
     api.companies.list,
@@ -44,12 +51,16 @@ export function Companies() {
     { initialNumItems: 25 },
   );
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "lastActivityAt" ? "desc" : "asc");
-    }
+  const table = useEntityTable(
+    "company",
+    COMPANY_COLUMNS,
+    results.map((c) => c._id),
+  );
+  const sticky = useStickyColumns(table.visible);
+
+  const setSort = (key: string, dir: "asc" | "desc") => {
+    setSortKey(key);
+    setSortDir(dir);
   };
 
   const filtered =
@@ -57,17 +68,69 @@ export function Companies() {
       ? results
       : results.filter((c) => c.enrichmentStatus === enrichmentFilter);
 
+  const numericKeys = new Set(["contactCount", "dealCount", "lastActivityAt"]);
+  const sortDefinition = table.definitionByColumn.get(sortKey);
   const sorted = [...filtered].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;
-    if (
-      sortKey === "contactCount" ||
-      sortKey === "dealCount" ||
-      sortKey === "lastActivityAt"
-    ) {
-      return ((a[sortKey] ?? 0) - (b[sortKey] ?? 0)) * dir;
+    if (sortDefinition) {
+      const av = table.fieldValue(sortDefinition, a._id) ?? "";
+      const bv = table.fieldValue(sortDefinition, b._id) ?? "";
+      if (sortDefinition.type === "number") {
+        return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+      }
+      return av.localeCompare(bv) * dir;
     }
-    return String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")) * dir;
+    const key = sortKey as keyof CompanyRow;
+    if (numericKeys.has(sortKey)) {
+      return ((Number(a[key]) || 0) - (Number(b[key]) || 0)) * dir;
+    }
+    return String(a[key] ?? "").localeCompare(String(b[key] ?? "")) * dir;
   });
+
+  const renderCell = (company: CompanyRow, column: ResolvedColumn) => {
+    const definition = table.definitionByColumn.get(column.key);
+    if (definition) {
+      return (
+        <FieldCell
+          definition={definition}
+          entityId={company._id}
+          value={table.fieldValue(definition, company._id)}
+        />
+      );
+    }
+    switch (column.key) {
+      case "name":
+        return (
+          <Link
+            to={`/app/companies/${company._id}`}
+            className="flex items-center gap-2 text-white hover:text-accent"
+          >
+            <CompanyLogo name={company.name} logoUrl={company.logoUrl} />
+            {company.name}
+          </Link>
+        );
+      case "domain":
+        return <span className="text-neutral-400">{company.domain ?? ""}</span>;
+      case "industry":
+        return (
+          <span className="text-neutral-400">{company.industry ?? ""}</span>
+        );
+      case "enrichmentStatus":
+        return <EnrichmentBadge status={company.enrichmentStatus} />;
+      case "contactCount":
+        return <span className="text-neutral-400">{company.contactCount}</span>;
+      case "dealCount":
+        return <span className="text-neutral-400">{company.dealCount}</span>;
+      case "lastActivityAt":
+        return (
+          <span className="text-neutral-500">
+            {company.lastActivityAt ? timeAgo(company.lastActivityAt) : ""}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -101,6 +164,9 @@ export function Companies() {
           }))}
           className="w-full sm:w-52"
         />
+        <div className="ml-auto">
+          <ColumnsButton table={table} />
+        </div>
       </div>
 
       {showNew ? <NewCompanyForm onDone={() => setShowNew(false)} /> : null}
@@ -108,94 +174,42 @@ export function Companies() {
       <Panel>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-edge text-xs text-neutral-500">
-              <SortHeader
-                label="Company"
-                active={sortKey === "name"}
-                dir={sortDir}
-                onClick={() => toggleSort("name")}
-              />
-              <SortHeader
-                label="Domain"
-                active={sortKey === "domain"}
-                dir={sortDir}
-                onClick={() => toggleSort("domain")}
-              />
-              <SortHeader
-                label="Industry"
-                active={sortKey === "industry"}
-                dir={sortDir}
-                onClick={() => toggleSort("industry")}
-              />
-              <SortHeader
-                label="Enrichment"
-                active={sortKey === "enrichmentStatus"}
-                dir={sortDir}
-                onClick={() => toggleSort("enrichmentStatus")}
-              />
-              <SortHeader
-                label="Contacts"
-                active={sortKey === "contactCount"}
-                dir={sortDir}
-                onClick={() => toggleSort("contactCount")}
-              />
-              <SortHeader
-                label="Deals"
-                active={sortKey === "dealCount"}
-                dir={sortDir}
-                onClick={() => toggleSort("dealCount")}
-              />
-              <SortHeader
-                label="Last activity"
-                active={sortKey === "lastActivityAt"}
-                dir={sortDir}
-                onClick={() => toggleSort("lastActivityAt")}
-              />
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((company) => (
-              <tr
-                key={company._id}
-                className="border-b border-edge/60 last:border-0 hover:bg-white/[0.02]"
-              >
-                <td className="px-4 py-3">
-                  <Link
-                    to={`/app/companies/${company._id}`}
-                    className="flex items-center gap-2 text-white hover:text-accent"
-                  >
-                    <CompanyLogo
-                      name={company.name}
-                      logoUrl={company.logoUrl}
-                    />
-                    {company.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-400">
-                  {company.domain ?? ""}
-                </td>
-                <td className="px-4 py-3 text-neutral-400">
-                  {company.industry ?? ""}
-                </td>
-                <td className="px-4 py-3">
-                  <EnrichmentBadge status={company.enrichmentStatus} />
-                </td>
-                <td className="px-4 py-3 text-neutral-400">
-                  {company.contactCount}
-                </td>
-                <td className="px-4 py-3 text-neutral-400">
-                  {company.dealCount}
-                </td>
-                <td className="px-4 py-3 text-neutral-500">
-                  {company.lastActivityAt
-                    ? timeAgo(company.lastActivityAt)
-                    : ""}
-                </td>
+            <thead>
+              <tr className="border-b border-edge text-xs text-neutral-500">
+                {table.visible.map((column) => (
+                  <HeaderCell
+                    key={column.key}
+                    column={column}
+                    table={table}
+                    sticky={sticky}
+                    sort={sortKey === column.key ? sortDir : null}
+                    onSort={(dir) => setSort(column.key, dir)}
+                  />
+                ))}
               </tr>
-            ))}
-            <InlineAddRow />
-          </tbody>
+            </thead>
+            <tbody>
+              {sorted.map((company) => (
+                <tr
+                  key={company._id}
+                  className="border-b border-edge/60 last:border-0 hover:bg-white/[0.02]"
+                >
+                  {table.visible.map((column) => {
+                    const pin = sticky.pinProps(column, "body");
+                    return (
+                      <td
+                        key={column.key}
+                        style={pin.style}
+                        className={`whitespace-nowrap px-4 py-3 ${pin.className}`}
+                      >
+                        {renderCell(company, column)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <InlineAddRow columns={table.visible} sticky={sticky} />
+            </tbody>
           </table>
         </div>
         {status === "CanLoadMore" ? (
@@ -210,8 +224,14 @@ export function Companies() {
 
 // The last table row is a composer: type a name, optionally a domain, and
 // Enter creates the company through the same mutation the form uses, so a
-// domain still queues enrichment.
-function InlineAddRow() {
+// domain still queues enrichment. Cells follow whatever columns are visible.
+function InlineAddRow({
+  columns,
+  sticky,
+}: {
+  columns: Array<ResolvedColumn>;
+  sticky: StickyColumns;
+}) {
   const create = useMutation(api.companies.create);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
@@ -229,36 +249,59 @@ function InlineAddRow() {
     }
   };
 
+  const lastKey = columns[columns.length - 1]?.key;
+  const addButton = name.trim() ? (
+    <Button variant="primary" onClick={() => void submit()}>
+      Add
+    </Button>
+  ) : null;
+
   return (
     <tr className="bg-white/[0.01]">
-      <td className="px-4 py-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void submit()}
-          placeholder="+ Add company"
-          className="w-full bg-transparent text-sm text-white placeholder:text-neutral-600 focus:outline-none"
-        />
-      </td>
-      <td className="px-4 py-2">
-        <input
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void submit()}
-          placeholder="domain (optional)"
-          className="w-full bg-transparent text-sm text-neutral-400 placeholder:text-neutral-700 focus:outline-none"
-        />
-      </td>
-      <td colSpan={4} className="px-4 py-2 text-xs text-red-400">
-        {error ?? ""}
-      </td>
-      <td className="px-4 py-2 text-right">
-        {name.trim() ? (
-          <Button variant="primary" onClick={() => void submit()}>
-            Add
-          </Button>
-        ) : null}
-      </td>
+      {columns.map((column) => {
+        const pin = sticky.pinProps(column, "body");
+        let content = null;
+        if (column.key === "name") {
+          content = (
+            <>
+              <div className="flex items-center gap-2">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void submit()}
+                  placeholder="+ Add company"
+                  className="w-full bg-transparent text-sm text-white placeholder:text-neutral-600 focus:outline-none"
+                />
+                {columns.length === 1 ? addButton : null}
+              </div>
+              {error ? (
+                <p className="mt-1 text-xs text-red-400">{error}</p>
+              ) : null}
+            </>
+          );
+        } else if (column.key === "domain") {
+          content = (
+            <input
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void submit()}
+              placeholder="domain (optional)"
+              className="w-full bg-transparent text-sm text-neutral-400 placeholder:text-neutral-700 focus:outline-none"
+            />
+          );
+        } else if (column.key === lastKey) {
+          content = <div className="text-right">{addButton}</div>;
+        }
+        return (
+          <td
+            key={column.key}
+            style={pin.style}
+            className={`px-4 py-2 ${pin.className}`}
+          >
+            {content}
+          </td>
+        );
+      })}
     </tr>
   );
 }

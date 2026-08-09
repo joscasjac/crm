@@ -1,5 +1,57 @@
 # Changelog
 
+## [2.13.0] (2026-08-09)
+
+Per-entity settings, renameable columns, custom field columns, and an upgraded table view. Timestamp: 2026-08-09 19:55 UTC.
+
+### Added
+
+- `tableSettings` table storing per-entity column preferences (rename, hide, pin) and new-record defaults (owner, industry, stage, currency, auto enrich), one row per entity with sparse column overrides (`convex/schema.ts`, `convex/tableSettings.ts`)
+- Settings sections for Companies, Contacts, and Deals, each with three panels: new-record defaults that save on change, the full column list with inline rename (plus a "was X / restore" note), show and pin toggles, and the custom fields manager (`src/app/EntitySettingsSection.tsx`, `src/app/Settings.tsx`)
+- Custom fields now support all four types (text, number, select, date) from Settings, can be renamed and have their select options edited in place, and archived fields can be restored; each active field becomes a real column in its entity's table (`convex/fields.ts`, `src/app/EntitySettingsSection.tsx`)
+- Shared table infrastructure: per-column header menu (sort ascending and descending, pin, hide, reset) opened from a dots button, a Columns toolbar dropdown with visibility checkboxes and pin toggles, sticky pinned columns with measured offsets that survive horizontal scroll, and click-to-edit cells for custom field values (`src/components/dataTable.tsx`, `src/lib/columns.ts`)
+- Companies, Contacts, and the Deals list view are column-driven: renames from Settings apply live, hidden columns disappear, pinned columns stick left, custom fields render as editable columns, and sorting works on built-in and custom columns (`src/app/Companies.tsx`, `src/app/Contacts.tsx`, `src/app/Deals.tsx`)
+- Create mutations apply workspace defaults: new companies get the default industry and owner and respect the auto-enrich toggle, new contacts and deals get the default owner, and the New deal form prefills the default stage and currency (`convex/companies.ts`, `convex/contacts.ts`, `convex/deals.ts`, `src/app/Deals.tsx`)
+- Company detail Overview custom fields are click-to-edit with the same cell editor the table uses (`src/app/CompanyDetail.tsx`)
+
+### Changed
+
+- The old Custom fields settings section is replaced by the per-entity sections; old `/app/settings/fields` bookmarks land on the Companies section (`src/app/Settings.tsx`)
+- `fields.tableValues` batch query feeds table columns in one read instead of one query per row (`convex/fields.ts`)
+- Header menus render in a fixed-position portal so they escape the table's horizontal scroll container, and the column menu button stays visible on touch screens while appearing on hover on desktop (`src/components/dataTable.tsx`)
+
+## [2.12.1] (2026-08-09)
+
+Footer credit line. Timestamp: 2026-08-09 17:25 UTC.
+
+### Added
+
+- "Built with Cursor and Fable." line under the footer tagline, shown on the homepage and Compare page only through a new `credit` prop on `SiteFooter`; the Docs page footer stays as it was (`src/pages/Landing.tsx`, `src/pages/Compare.tsx`)
+
+## [2.12.0] (2026-08-09)
+
+Calendar due dates for tasks. Timestamp: 2026-08-09 17:10 UTC.
+
+### Added
+
+- Themed `DateInput` calendar popover component following the custom Select pattern: month grid with prev and next, today highlight, Escape and outside click close (`src/components/ui.tsx`)
+- Task composer due date modes: an "in days / on date" toggle where "in days" keeps the number field and "on date" opens the calendar picker; calendar picks land at 9:00 local time (`src/components/Timeline.tsx`)
+- Ask `/task` explicit date phrases: "on Aug 15", "on August 15, 2026", "on 8/15", "on 8/15/2026", and "on 2026-08-15" set the due date at 16:00 UTC, and month-day phrases without a year roll forward once the date has passed; the confirmation replies "Due Aug 15" for explicit dates (`convex/ask.ts`)
+- `shortDate` formatting helper for "Aug 15" style labels with the year shown only when it differs from the current one (`src/lib/format.ts`)
+
+### Changed
+
+- Timeline feed shows the actual date ("due Aug 15") when a task is due more than 7 days out instead of a large day count (`src/components/Timeline.tsx`)
+- The `/task` slash hint and the docs Ask and Notes-and-tasks bullets mention the date phrases and the calendar picker (`src/app/Ask.tsx`, `src/pages/Docs.tsx`)
+
+## [2.11.5] (2026-08-09)
+
+Custom domain docs. Timestamp: 2026-08-09 16:55 UTC.
+
+### Added
+
+- "Custom domain with Cloudflare" docs section between Deploying to production and the coding agents section. It walks through adding a domain to Cloudflare, SSL/TLS settings (Full strict plus Always Use HTTPS), the three DNS records (proxied A record on the root, DNS only CNAME from www to convex.domains, and the \_convex_domains TXT verification record), adding the domain in the Convex dashboard for HTTP actions, the root to www redirect rule, curl verification steps with a troubleshooting checklist, and the optional CONVEX_CLOUD_URL override (`src/pages/Docs.tsx`)
+
 ## [2.11.4] (2026-08-09)
 
 Demo banner restyle and Team demo note. Timestamp: 2026-08-09 16:45 UTC.

@@ -5,6 +5,13 @@ import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import {
+  ColumnsButton,
+  FieldCell,
+  HeaderCell,
+  useEntityTable,
+  useStickyColumns,
+} from "../components/dataTable";
+import {
   Avatar,
   Button,
   CompanyLogo,
@@ -14,6 +21,8 @@ import {
   Panel,
   Select,
 } from "../components/ui";
+import { DEAL_COLUMNS } from "../lib/columns";
+import type { ResolvedColumn } from "../lib/columns";
 import { formatMoney, stageLabel } from "../lib/format";
 
 const STAGES = [
@@ -29,10 +38,9 @@ type BoardDeal = FunctionReturnType<
   typeof api.deals.board
 >[number]["deals"][number];
 
-type SortKey = "name" | "company" | "stage" | "amountMinor";
-
 // Kanban board grouped by stage, with native drag and drop between columns
-// and a sortable list view. Stage moves are one mutation and every other
+// and a column-driven list view that shares the table infrastructure with
+// Companies and Contacts. Stage moves are one mutation and every other
 // open client sees the card move in real time.
 export function Deals() {
   const board = useQuery(api.deals.board);
@@ -41,7 +49,7 @@ export function Deals() {
   const [view, setView] = useState<"board" | "list">("board");
   const [dragDealId, setDragDealId] = useState<Id<"deals"> | null>(null);
   const [dropStage, setDropStage] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("amountMinor");
+  const [sortKey, setSortKey] = useState<string>("amountMinor");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const onDrop = (stage: (typeof STAGES)[number]) => {
@@ -53,21 +61,102 @@ export function Deals() {
 
   const allDeals: Array<BoardDeal> =
     board?.flatMap((column) => column.deals) ?? [];
+
+  const table = useEntityTable(
+    "deal",
+    DEAL_COLUMNS,
+    allDeals.map((d) => d._id),
+  );
+  const sticky = useStickyColumns(table.visible);
+
+  const setSort = (key: string, dir: "asc" | "desc") => {
+    setSortKey(key);
+    setSortDir(dir);
+  };
+
+  const sortDefinition = table.definitionByColumn.get(sortKey);
   const sorted = [...allDeals].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;
+    if (sortDefinition) {
+      const av = table.fieldValue(sortDefinition, a._id) ?? "";
+      const bv = table.fieldValue(sortDefinition, b._id) ?? "";
+      if (sortDefinition.type === "number") {
+        return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+      }
+      return av.localeCompare(bv) * dir;
+    }
     if (sortKey === "amountMinor") return (a.amountMinor - b.amountMinor) * dir;
-    const left =
-      sortKey === "company" ? (a.company?.name ?? "") : String(a[sortKey]);
-    const right =
-      sortKey === "company" ? (b.company?.name ?? "") : String(b[sortKey]);
-    return left.localeCompare(right) * dir;
+    const pick = (deal: BoardDeal) => {
+      if (sortKey === "company") return deal.company?.name ?? "";
+      if (sortKey === "owner") return deal.owner?.name ?? "";
+      if (sortKey === "stage") return deal.stage;
+      return deal.name;
+    };
+    return pick(a).localeCompare(pick(b)) * dir;
   });
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "amountMinor" ? "desc" : "asc");
+  const renderCell = (deal: BoardDeal, column: ResolvedColumn) => {
+    const definition = table.definitionByColumn.get(column.key);
+    if (definition) {
+      return (
+        <FieldCell
+          definition={definition}
+          entityId={deal._id}
+          value={table.fieldValue(definition, deal._id)}
+        />
+      );
+    }
+    switch (column.key) {
+      case "name":
+        return <span className="text-white">{deal.name}</span>;
+      case "company":
+        return deal.company ? (
+          <Link
+            to={`/app/companies/${deal.company._id}`}
+            className="flex items-center gap-2 text-neutral-400 hover:text-accent"
+          >
+            <CompanyLogo
+              name={deal.company.name}
+              logoUrl={deal.company.logoUrl}
+              size={16}
+            />
+            {deal.company.name}
+          </Link>
+        ) : null;
+      case "stage":
+        return (
+          <Select
+            size="sm"
+            ariaLabel="Stage"
+            value={deal.stage}
+            onChange={(stage) =>
+              void changeStage({
+                dealId: deal._id,
+                stage: stage as (typeof STAGES)[number],
+              })
+            }
+            options={STAGES.map((stage) => ({
+              value: stage,
+              label: stageLabel(stage),
+            }))}
+            className="w-36"
+          />
+        );
+      case "amountMinor":
+        return (
+          <span className="text-neutral-300">
+            {formatMoney(deal.amountMinor, deal.currency)}
+          </span>
+        );
+      case "owner":
+        return deal.owner ? (
+          <span className="flex items-center gap-2 text-neutral-400">
+            <Avatar name={deal.owner.name} src={deal.owner.avatarUrl} size={18} />
+            {deal.owner.name}
+          </span>
+        ) : null;
+      default:
+        return null;
     }
   };
 
@@ -93,6 +182,7 @@ export function Deals() {
                 </button>
               ))}
             </div>
+            {view === "list" ? <ColumnsButton table={table} /> : null}
             <Button variant="primary" onClick={() => setShowNew(true)}>
               New deal
             </Button>
@@ -104,95 +194,43 @@ export function Deals() {
       {view === "list" ? (
         <Panel>
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-edge text-xs text-neutral-500">
-                <SortHeader
-                  label="Deal"
-                  active={sortKey === "name"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("name")}
-                />
-                <SortHeader
-                  label="Company"
-                  active={sortKey === "company"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("company")}
-                />
-                <SortHeader
-                  label="Stage"
-                  active={sortKey === "stage"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("stage")}
-                />
-                <SortHeader
-                  label="Amount"
-                  active={sortKey === "amountMinor"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("amountMinor")}
-                />
-                <th className="px-4 py-3 font-medium">Owner</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((deal) => (
-                <tr
-                  key={deal._id}
-                  className="border-b border-edge/60 last:border-0 hover:bg-white/[0.02]"
-                >
-                  <td className="px-4 py-3 text-white">{deal.name}</td>
-                  <td className="px-4 py-3">
-                    {deal.company ? (
-                      <Link
-                        to={`/app/companies/${deal.company._id}`}
-                        className="flex items-center gap-2 text-neutral-400 hover:text-accent"
-                      >
-                        <CompanyLogo
-                          name={deal.company.name}
-                          logoUrl={deal.company.logoUrl}
-                          size={16}
-                        />
-                        {deal.company.name}
-                      </Link>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Select
-                      size="sm"
-                      ariaLabel="Stage"
-                      value={deal.stage}
-                      onChange={(stage) =>
-                        void changeStage({
-                          dealId: deal._id,
-                          stage: stage as (typeof STAGES)[number],
-                        })
-                      }
-                      options={STAGES.map((stage) => ({
-                        value: stage,
-                        label: stageLabel(stage),
-                      }))}
-                      className="w-36"
+            <table className="w-full min-w-[680px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-edge text-xs text-neutral-500">
+                  {table.visible.map((column) => (
+                    <HeaderCell
+                      key={column.key}
+                      column={column}
+                      table={table}
+                      sticky={sticky}
+                      sort={sortKey === column.key ? sortDir : null}
+                      onSort={(dir) => setSort(column.key, dir)}
                     />
-                  </td>
-                  <td className="px-4 py-3 text-neutral-300">
-                    {formatMoney(deal.amountMinor, deal.currency)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {deal.owner ? (
-                      <span className="flex items-center gap-2 text-neutral-400">
-                        <Avatar
-                          name={deal.owner.name}
-                          src={deal.owner.avatarUrl}
-                          size={18}
-                        />
-                        {deal.owner.name}
-                      </span>
-                    ) : null}
-                  </td>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sorted.map((deal) => (
+                  <tr
+                    key={deal._id}
+                    className="border-b border-edge/60 last:border-0 hover:bg-white/[0.02]"
+                  >
+                    {table.visible.map((column) => {
+                      const pin = sticky.pinProps(column, "body");
+                      return (
+                        <td
+                          key={column.key}
+                          style={pin.style}
+                          className={`whitespace-nowrap px-4 py-3 ${pin.className}`}
+                        >
+                          {renderCell(deal, column)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Panel>
       ) : (
@@ -290,41 +328,19 @@ export function Deals() {
   );
 }
 
-export function SortHeader({
-  label,
-  active,
-  dir,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  dir: "asc" | "desc";
-  onClick: () => void;
-}) {
-  return (
-    <th className="px-4 py-3 font-medium">
-      <button
-        onClick={onClick}
-        className={`flex items-center gap-1 transition-colors hover:text-neutral-300 ${
-          active ? "text-white" : ""
-        }`}
-      >
-        {label}
-        <span className="text-[9px]">
-          {active ? (dir === "asc" ? "▲" : "▼") : ""}
-        </span>
-      </button>
-    </th>
-  );
-}
-
 function NewDealForm({ onDone }: { onDone: () => void }) {
   const companies = useQuery(api.companies.names);
+  const settings = useQuery(api.tableSettings.get, { entity: "deal" });
   const create = useMutation(api.deals.create);
   const [name, setName] = useState("");
   const [companyId, setCompanyId] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Workspace defaults from Settings prefill the pieces the form does not ask
+  // about: stage and currency.
+  const defaultStage = settings?.defaults.stage ?? "QUALIFIED";
+  const defaultCurrency = settings?.defaults.currency ?? "USD";
 
   const submit = async () => {
     try {
@@ -337,8 +353,8 @@ function NewDealForm({ onDone }: { onDone: () => void }) {
         name,
         companyId: companyId as Id<"companies">,
         amountMinor: Math.round(dollars * 100),
-        currency: "USD",
-        stage: "QUALIFIED",
+        currency: defaultCurrency,
+        stage: defaultStage,
       });
       onDone();
     } catch (err) {
@@ -374,7 +390,7 @@ function NewDealForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="w-full sm:w-36">
           <label className="mb-1 block text-xs text-neutral-500">
-            Amount (USD)
+            Amount ({defaultCurrency})
           </label>
           <NumberInput value={amount} onChange={setAmount} min={0} />
         </div>
@@ -389,6 +405,10 @@ function NewDealForm({ onDone }: { onDone: () => void }) {
           Cancel
         </Button>
       </div>
+      <p className="mt-2 text-xs text-neutral-600">
+        New deals start in {stageLabel(defaultStage)}. Change defaults in
+        Settings.
+      </p>
       {error ? <p className="mt-2 text-xs text-red-400">{error}</p> : null}
     </Panel>
   );

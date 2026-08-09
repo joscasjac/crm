@@ -1,6 +1,6 @@
 # Files
 
-Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
+Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 
 ## Root
 
@@ -32,13 +32,14 @@ Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
 | `contacts.ts` | Contact list, detail with facts, create, update, delete |
 | `deals.ts` | Board grouped by stage, create, update, stage change with activity log, delete |
 | `activities.ts` | Timelines per record, open tasks, note and task creation with optional email reminders, task completion |
-| `fields.ts` | Custom field definitions and values, agent briefs, archiving |
+| `fields.ts` | Custom field definitions and values, agent briefs, rename and option edits, archive and restore, batch `tableValues` query for table columns |
+| `tableSettings.ts` | Per-entity column preferences (rename, hide, pin) and new-record defaults (owner, industry, stage, currency, auto enrich); `entityDefaults` helper for create mutations |
 | `dashboard.ts` | Pipeline summary from aggregates, recent activity feed |
 | `agentTasks.ts` | The work queue: claim with leases, tick, execute through the workpool, rechecks with required reasons |
 | `agents.ts` | Agent builder: draft from a sentence, versioned instructions, deploy and pause |
 | `enrichment.ts` | Context.dev brand lookup with action cache and rate limiter, writes facts and timeline entries |
 | `chat.ts` | Record chat on the agent component, with read_crm_history, search_the_web (Exa), and read_web_page (Firecrawl) tools; runs on the workspace's selected AI provider |
-| `ask.ts` | Workspace-wide Ask chat: threads with archive and delete, CRM overview tool, web research tools, streamed provider-aware generation, /task and /note slash commands |
+| `ask.ts` | Workspace-wide Ask chat: threads with archive and delete, CRM overview tool, web research tools, streamed provider-aware generation, /task and /note slash commands with relative and explicit due date parsing |
 | `ai.ts` | AI provider registry: OpenAI, Anthropic, OpenRouter models, key checks, and the missing-key reply |
 | `prefs.ts` | Workspace preferences: sidebar order and hidden items, AI provider |
 | `logs.ts` | Activity log: record helper for mutations and actions, list query, clear and clearMany mutations |
@@ -64,9 +65,11 @@ Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
 | `App.tsx` | Routes: landing, compare, docs, and the /app CRM shell (dashboard, companies, contacts, deals, ask, activity, agents, settings) |
 | `index.css` | Theme tokens for Composio dark (default) and Minimax light (`html.light`) |
 | `vite-env.d.ts` | Vite client types |
-| `lib/format.ts` | Money, relative time, stage labels, initials |
-| `components/ui.tsx` | Panel, buttons, inputs, themed Select and NumberInput and Checkbox, avatars, badges, empty states |
-| `components/Timeline.tsx` | Shared notes-and-tasks composer and feed for company and contact detail, with due dates, reminders, and complete buttons |
+| `lib/format.ts` | Money, relative time, short dates, stage labels, initials |
+| `lib/columns.ts` | Column registry for the three entity tables: built-in column definitions, custom field column keys, merge of saved preferences with active fields |
+| `components/dataTable.tsx` | Shared table infrastructure: `useEntityTable` and `useStickyColumns` hooks, portal header menu (sort, pin, hide, reset), Columns chooser dropdown, click-to-edit custom field cell |
+| `components/ui.tsx` | Panel, buttons, inputs, themed Select and NumberInput and Checkbox and DateInput calendar, avatars, badges, empty states |
+| `components/Timeline.tsx` | Shared notes-and-tasks composer and feed for company and contact detail, with due dates in days or from a calendar, reminders, and complete buttons |
 | `components/ComposeEmail.tsx` | Floating compose window: draggable, resizable, To/Cc/Bcc/Subject, markdown body with preview, Convex storage attachments, provider-aware Send |
 | `components/ShortcutsModal.tsx` | Themed keyboard shortcuts modal, opened from the sidebar footer icon or ⌘? |
 | `components/DemoBanner.tsx` | Demo banner with live countdown to the next reset |
@@ -74,15 +77,16 @@ Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
 | `components/CommandK.tsx` | Command-K search palette with keyboard navigation |
 | `app/AppLayout.tsx` | Sidebar shell: demo badge, search trigger, drag-reorderable and hideable nav, Phosphor collapse toggle, global ⌘K ⌘? ⌘. keys, fork and docs links, shortcuts and theme buttons; seeds the workspace on first visit |
 | `app/Dashboard.tsx` | Stat cards, pipeline by stage, agent follow-ups, recent activity |
-| `app/Companies.tsx` | Company table with search, sorting, enrichment filter, inline add row, pagination, and a create form |
-| `app/CompanyDetail.tsx` | Tabs: overview, contacts, deals, activity, and the agent tab with record chat |
-| `app/Contacts.tsx` | Contact table with search, sorting, company filter, inline add row, and pagination |
+| `app/Companies.tsx` | Column-driven company table: search, enrichment filter, header menus with sort and pin, custom field columns with inline edit, inline add row, pagination, create form |
+| `app/CompanyDetail.tsx` | Tabs: overview (with click-to-edit custom fields), contacts, deals, activity, and the agent tab with record chat |
+| `app/Contacts.tsx` | Column-driven contact table: search, company filter, header menus, custom field columns with inline edit, inline add row, pagination |
 | `app/ContactDetail.tsx` | Facts with evidence bands, recheck scheduling, notes-and-tasks timeline |
-| `app/Deals.tsx` | Drag-and-drop board plus a sortable list view, stage moves, and a create form |
+| `app/Deals.tsx` | Drag-and-drop board plus a column-driven list view with custom field columns, stage moves, and a create form prefilled from workspace defaults |
 | `app/Ask.tsx` | Claude-style workspace chat: streamed replies, thread sub-sidebar with archive and delete, slash commands, time-aware greeting, provider notes |
 | `app/Activity.tsx` | Live function-outcome log with pause, select one or all, and clear, in the shape of the Convex dashboard |
 | `app/Agents.tsx` | Agent builder: describe a process, manage drafts, deploy, pause |
-| `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Integrations (with the "Adding API keys" panel), Slack (master switch, event toggles, channel picker with search, test button, /crm bot), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide, Custom fields |
+| `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Companies, Contacts, Deals (per-entity defaults, columns, custom fields), Integrations (with the "Adding API keys" panel), Slack (master switch, event toggles, channel picker with search, test button, /crm bot), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide |
+| `app/EntitySettingsSection.tsx` | The per-entity settings body: new-record defaults panel, column list with inline rename plus show and pin toggles, custom fields manager with type-specific creation, option editing, archive and restore |
 | `pages/Landing.tsx` | Marketing page: hero with copy prompt and git clone one-liner, built-with, agent sections, 20 second demo video, demo notes |
 | `pages/Compare.tsx` | Upstream vs Convex comparison table |
 | `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar, sidebar search over section titles and body text, and active-section highlight: fork, env vars, email and compose, Slack, web research, AI providers, auth, deploy, coding agents |
@@ -101,4 +105,4 @@ Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
 
 ## docs/
 
-Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), and `prds/slack-integration.md` (Slack notifications and the /crm bot).
+Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), `prds/slack-integration.md` (Slack notifications and the /crm bot), and `prds/task-due-date-calendar.md` (calendar due dates for tasks).

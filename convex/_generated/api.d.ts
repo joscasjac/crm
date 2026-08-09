@@ -38,6 +38,7 @@ import type * as search from "../search.js";
 import type * as slack from "../slack.js";
 import type * as slackBot from "../slackBot.js";
 import type * as staticHosting from "../staticHosting.js";
+import type * as tableSettings from "../tableSettings.js";
 import type * as users from "../users.js";
 import type * as web from "../web.js";
 
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   slack: typeof slack;
   slackBot: typeof slackBot;
   staticHosting: typeof staticHosting;
+  tableSettings: typeof tableSettings;
   users: typeof users;
   web: typeof web;
 }>;

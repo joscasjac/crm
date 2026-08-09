@@ -195,8 +195,9 @@ export const messages = query({
 
 // Slash commands the CRM handles itself, no model key required. "/task" and
 // "/note" write straight to the timeline; a company or contact name in the
-// text links the record, "email me" schedules a reminder, "in N days" or
-// "tomorrow" sets the due date.
+// text links the record, "email me" schedules a reminder, and "in N days",
+// "tomorrow", or an explicit date like "on Aug 15", "on 8/15", or
+// "on 2026-08-15" sets the due date.
 const parseSlashCommand = (
   prompt: string,
 ): { type: "TASK" | "NOTE"; body: string } | null => {
@@ -208,12 +209,107 @@ const parseSlashCommand = (
   };
 };
 
-const parseDueAt = (body: string): number => {
+const MONTH_PREFIXES = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
+] as const;
+
+// The server has no user timezone, so explicit dates land at 16:00 UTC:
+// mid-morning in the US, evening in Europe.
+const DUE_HOUR_UTC = 16;
+
+const atUtc = (
+  year: number,
+  monthIndex: number,
+  day: number,
+): number | null => {
+  if (monthIndex < 0 || monthIndex > 11 || day < 1 || day > 31) return null;
+  const timestamp = Date.UTC(year, monthIndex, day, DUE_HOUR_UTC);
+  // Reject overflow like Feb 31 rolling into March.
+  return new Date(timestamp).getUTCDate() === day ? timestamp : null;
+};
+
+// A month-day phrase without a year rolls forward once it has passed.
+const upcomingUtc = (monthIndex: number, day: number): number | null => {
+  const year = new Date().getUTCFullYear();
+  const thisYear = atUtc(year, monthIndex, day);
+  if (thisYear === null) return null;
+  return thisYear >= Date.now() ? thisYear : atUtc(year + 1, monthIndex, day);
+};
+
+// "on 2026-08-15", "on 8/15", "on 8/15/2026", "on Aug 15", "on August 15, 2026".
+const parseExplicitDueAt = (body: string): number | null => {
+  const iso = body.match(/\bon\s+(\d{4})-(\d{1,2})-(\d{1,2})\b/i);
+  if (iso) {
+    return atUtc(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const slash = body.match(/\bon\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/i);
+  if (slash) {
+    const monthIndex = Number(slash[1]) - 1;
+    const day = Number(slash[2]);
+    return slash[3]
+      ? atUtc(Number(slash[3]), monthIndex, day)
+      : upcomingUtc(monthIndex, day);
+  }
+  const named = body.match(
+    /\bon\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/i,
+  );
+  if (named) {
+    const monthIndex = MONTH_PREFIXES.indexOf(
+      named[1].toLowerCase() as (typeof MONTH_PREFIXES)[number],
+    );
+    const day = Number(named[2]);
+    return named[3]
+      ? atUtc(Number(named[3]), monthIndex, day)
+      : upcomingUtc(monthIndex, day);
+  }
+  return null;
+};
+
+const parseDueAt = (body: string): { dueAt: number; explicit: boolean } => {
+  const explicit = parseExplicitDueAt(body);
+  if (explicit !== null) return { dueAt: explicit, explicit: true };
   const day = 86_400_000;
   const inDays = body.match(/\bin\s+(\d+)\s+days?\b/i);
-  if (inDays) return Date.now() + Number(inDays[1]) * day;
-  if (/\btoday\b/i.test(body)) return Date.now() + 4 * 60 * 60 * 1000;
-  return Date.now() + day;
+  if (inDays) {
+    return { dueAt: Date.now() + Number(inDays[1]) * day, explicit: false };
+  }
+  if (/\btoday\b/i.test(body)) {
+    return { dueAt: Date.now() + 4 * 60 * 60 * 1000, explicit: false };
+  }
+  return { dueAt: Date.now() + day, explicit: false };
+};
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+const formatUtcDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  const year = date.getUTCFullYear();
+  const suffix = year === new Date().getUTCFullYear() ? "" : `, ${year}`;
+  return `${MONTH_LABELS[date.getUTCMonth()]} ${date.getUTCDate()}${suffix}`;
 };
 
 async function matchRecord(
@@ -245,12 +341,12 @@ async function runSlashCommand(
   const record = await matchRecord(ctx, command.body);
   const remindMe =
     command.type === "TASK" && /\bemail\s+me\b/i.test(command.body);
-  const dueAt = command.type === "TASK" ? parseDueAt(command.body) : undefined;
+  const due = command.type === "TASK" ? parseDueAt(command.body) : undefined;
   const { recordName, reminderScheduled } = await insertActivity(ctx, {
     type: command.type,
     body: command.body,
     ...record,
-    dueAt,
+    dueAt: due?.dueAt,
     remindMe,
   });
 
@@ -263,9 +359,16 @@ async function runSlashCommand(
   lines.push(
     `${command.type === "TASK" ? "Task" : "Note"} added${recordName ? ` to ${recordName}` : ""}.`,
   );
-  if (command.type === "TASK" && dueAt) {
-    const days = Math.max(1, Math.round((dueAt - Date.now()) / 86_400_000));
-    lines.push(`Due in about ${days} day${days === 1 ? "" : "s"}.`);
+  if (command.type === "TASK" && due) {
+    if (due.explicit) {
+      lines.push(`Due ${formatUtcDate(due.dueAt)}.`);
+    } else {
+      const days = Math.max(
+        1,
+        Math.round((due.dueAt - Date.now()) / 86_400_000),
+      );
+      lines.push(`Due in about ${days} day${days === 1 ? "" : "s"}.`);
+    }
   }
   if (remindMe) {
     if (!reminderScheduled) {

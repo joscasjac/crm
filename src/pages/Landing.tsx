@@ -22,7 +22,7 @@ export function Landing() {
         <DemoNotes />
         <ForkIt />
       </main>
-      <SiteFooter />
+      <SiteFooter credit />
     </div>
   );
 }
@@ -365,7 +365,9 @@ function ForkIt() {
   );
 }
 
-export function SiteFooter() {
+// credit shows the built-with line on the homepage and Compare only; the
+// Docs page renders the footer without it.
+export function SiteFooter({ credit = false }: { credit?: boolean }) {
   return (
     <footer className="border-t border-edge py-10">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 text-center">
@@ -373,6 +375,15 @@ export function SiteFooter() {
           <img src="/convex-logo-white.png" alt="Convex" className="themed-logo h-4" />
           <span className="text-sm text-neutral-400">The open source agentic CRM, on Convex.</span>
         </div>
+        {credit ? (
+          <p className="text-xs text-neutral-600">
+            Built with{" "}
+            <a href="https://cursor.com" className="hover:text-neutral-400">
+              Cursor
+            </a>{" "}
+            and Fable.
+          </p>
+        ) : null}
         <div className="flex flex-wrap justify-center gap-4 text-xs text-neutral-500">
           <Link to="/docs" className="hover:text-neutral-300">
             Docs

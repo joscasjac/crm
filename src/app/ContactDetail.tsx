@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ComposeEmail } from "../components/ComposeEmail";
+import { FieldCell } from "../components/dataTable";
 import { TimelinePanel } from "../components/Timeline";
 import {
   Avatar,
@@ -153,9 +154,48 @@ export function ContactDetail() {
       </div>
 
       <div className="mt-4">
+        <CustomFieldsPanel contactId={contact._id} />
+      </div>
+
+      <div className="mt-4">
         <h3 className="mb-3 text-sm font-medium text-white">Timeline</h3>
         <TimelinePanel contactId={contact._id} activities={activities} />
       </div>
     </div>
+  );
+}
+
+function CustomFieldsPanel({ contactId }: { contactId: Id<"contacts"> }) {
+  const fields = useQuery(api.fields.forEntity, {
+    entity: "contact",
+    entityId: contactId,
+  });
+  if (!fields || fields.length === 0) return null;
+  return (
+    <Panel className="p-4">
+      <h3 className="mb-2 text-sm font-medium text-white">Custom fields</h3>
+      <div className="flex flex-col gap-1.5">
+        {fields.map((field) => (
+          <div
+            key={field.definition._id}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <span className="shrink-0 text-neutral-500">
+              {field.definition.label}
+              {field.definition.agentFilled ? (
+                <span className="ml-2 text-[10px] text-accent">agent</span>
+              ) : null}
+            </span>
+            <div className="min-w-0 max-w-56 flex-1 text-right">
+              <FieldCell
+                definition={field.definition}
+                entityId={contactId}
+                value={field.value ?? undefined}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
   );
 }

@@ -10,6 +10,7 @@ import { deleteDealCascade } from "./model/cascade";
 import { changeDealStage } from "./model/deals";
 import { writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
+import { entityDefaults } from "./tableSettings";
 
 export const STAGES = [
   "QUALIFIED",
@@ -81,7 +82,11 @@ export const create = writeMutation({
     if (!Number.isInteger(args.amountMinor) || args.amountMinor < 0) {
       throw new Error("Amount must be a non-negative integer of minor units");
     }
-    const dealId = await ctx.db.insert("deals", args);
+    const defaults = await entityDefaults(ctx, "deal");
+    const dealId = await ctx.db.insert("deals", {
+      ...args,
+      ownerId: defaults.ownerId,
+    });
     const doc = await ctx.db.get("deals", dealId);
     if (doc) await trackDealInsert(ctx, doc);
     await ctx.db.patch("companies", args.companyId, { lastActivityAt: Date.now() });

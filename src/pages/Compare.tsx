@@ -189,7 +189,7 @@ export function Compare() {
           </Link>
         </div>
       </main>
-      <SiteFooter />
+      <SiteFooter credit />
     </div>
   );
 }

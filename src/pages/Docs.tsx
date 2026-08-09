@@ -17,6 +17,7 @@ const SECTIONS = [
   { id: "ai-providers", label: "AI providers: OpenAI, Claude, OpenRouter" },
   { id: "auth", label: "Turning on sign-in" },
   { id: "deploy", label: "Deploying to production" },
+  { id: "custom-domain", label: "Custom domain with Cloudflare" },
   { id: "coding-agents", label: "Using Cursor, Codex, or other tools" },
   { id: "components", label: "Every component in this app" },
   { id: "resources", label: "Resources" },
@@ -347,16 +348,18 @@ export function Docs() {
                 CRM-only answers, and <K>/task</K> or <K>/note</K>, which
                 write straight to a record timeline with no AI key needed.
                 Mention a company or contact by name and the command links the
-                record; add "email me" to a task and a reminder goes through
+                record; phrases like "in 3 days", "tomorrow", or "on Aug 15"
+                set the due date, and "email me" schedules a reminder through
                 the configured email provider at the due time. Past chats live
                 in a sub-sidebar with archive and delete.
               </li>
               <li>
                 <span className="text-white">Notes and tasks.</span> Every
                 company and contact page has a composer that logs notes or
-                creates tasks with a due date, an optional email reminder, and
-                a Complete button. Timeline writes also land on the Activity
-                page, so both views tell one story.
+                creates tasks with a due date, set as "in N days" or picked
+                from a calendar, an optional email reminder, and a Complete
+                button. Timeline writes also land on the Activity page, so
+                both views tell one story.
               </li>
               <li>
                 <span className="text-white">Compose email.</span> The Email
@@ -951,6 +954,187 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
               work and syncs to your dev deployment. <K>npx convex deploy</K>{" "}
               and anything with <K>--prod</K> touch production. If you are not
               shipping, you do not need them.
+            </p>
+          </Section>
+
+          <Section id="custom-domain" title="Custom domain with Cloudflare">
+            <p>
+              The static hosting component serves this site at your{" "}
+              <K>*.convex.site</K> URL. To serve it from a domain you own,
+              point Cloudflare DNS at Convex and add the domain in the Convex
+              dashboard. This walkthrough assumes the app lives at{" "}
+              <K>www.yourdomain.com</K> and that bare <K>yourdomain.com</K>{" "}
+              redirects there. Replace <K>yourdomain.com</K> with your real
+              domain throughout.{" "}
+              <Ext href="https://docs.convex.dev/production/custom-domains">
+                Custom domains
+              </Ext>{" "}
+              require a Convex Pro plan.
+            </p>
+            <p>
+              <span className="text-white">1. Add your domain to
+              Cloudflare.</span> Skip this if the domain is already there.
+              Log in to the Cloudflare dashboard, click Add a site, and enter
+              your domain. The Free plan works fine. Cloudflare scans your
+              existing DNS records, then gives you two nameservers to set at
+              your registrar. Propagation can take up to 24 hours but is
+              usually faster. See the{" "}
+              <Ext href="https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/">
+                Cloudflare add a site guide
+              </Ext>
+              .
+            </p>
+            <p>
+              <span className="text-white">2. Lock down SSL/TLS.</span> Under
+              SSL/TLS, Overview, set the encryption mode to Full (strict).
+              Under SSL/TLS, Edge Certificates, turn Always Use HTTPS on.
+              This step is required: without Always Use HTTPS, plain HTTP
+              requests to the root domain never reach the redirect rule. See
+              the{" "}
+              <Ext href="https://developers.cloudflare.com/ssl/">
+                Cloudflare SSL docs
+              </Ext>
+              .
+            </p>
+            <p>
+              <span className="text-white">3. Add three DNS records.</span>{" "}
+              Go to DNS, Records in Cloudflare and create these:
+            </p>
+            <div className="overflow-x-auto rounded-lg border border-edge">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-edge bg-panel text-xs text-neutral-500">
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Content</th>
+                    <th className="px-3 py-2 font-medium">Proxy status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-edge/60 align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      A
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      @
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
+                      192.0.2.1
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">
+                      Proxied (orange cloud on)
+                    </td>
+                  </tr>
+                  <tr className="border-b border-edge/60 align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      CNAME
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      www
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
+                      convex.domains
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">
+                      DNS only (grey cloud)
+                    </td>
+                  </tr>
+                  <tr className="align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      TXT
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      _convex_domains
+                    </td>
+                    <td className="px-3 py-2 text-neutral-400">
+                      Verification token from the Convex dashboard
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">
+                      DNS only
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              The A record uses a dummy IP. Its proxied status lets
+              Cloudflare intercept root traffic and fire the redirect rule;
+              no real traffic reaches that IP. The <K>www</K> CNAME points at
+              Convex hosting and must stay DNS only so Convex can provision
+              the SSL certificate. The TXT token comes from the next step, so
+              come back and fill it in.
+            </p>
+            <p>
+              <span className="text-white">4. Add the domain in Convex.</span>{" "}
+              Open your production deployment in the Convex dashboard and go
+              to Settings, Custom Domains. Enter <K>www.yourdomain.com</K>{" "}
+              and choose HTTP actions, since the static hosting component
+              serves the site through HTTP routes on <K>convex.site</K>.
+              Convex shows the CNAME and TXT records it expects; copy the TXT
+              verification token into the <K>_convex_domains</K> record in
+              Cloudflare. Wait for the green checkmark. The first request can
+              take up to a minute as Convex mints the SSL certificate.
+            </p>
+            <p>
+              <span className="text-white">5. Redirect root to www.</span> In
+              Cloudflare, go to Rules, Redirect Rules and create a rule named
+              root to www. Match with a custom filter expression where
+              Hostname equals <K>yourdomain.com</K>. For the redirect, pick
+              Dynamic, status 301, check Preserve query string, and use this
+              expression:
+            </p>
+            <Code>{`concat("https://www.yourdomain.com", http.request.uri.path)`}</Code>
+            <p>
+              The expression preview should read{" "}
+              <K>{`(http.host eq "yourdomain.com")`}</K>. See the{" "}
+              <Ext href="https://developers.cloudflare.com/rules/url-forwarding/examples/redirect-root-to-www/">
+                Cloudflare root to www example
+              </Ext>
+              .
+            </p>
+            <p>
+              <span className="text-white">6. Verify.</span> Allow up to an
+              hour for DNS propagation, then test:
+            </p>
+            <Code>{`# Should return 301 to https://www.yourdomain.com
+curl -I https://yourdomain.com
+
+# Should return 200 from your app
+curl -I https://www.yourdomain.com
+
+# HTTP should redirect too, via Always Use HTTPS plus the rule
+curl -I http://yourdomain.com`}</Code>
+            <p>If something is off, check these in order:</p>
+            <ul className="flex list-disc flex-col gap-2 pl-5">
+              <li>
+                The root A record is Proxied (orange cloud), not DNS only.
+              </li>
+              <li>Always Use HTTPS is on.</li>
+              <li>
+                The <K>www</K> CNAME is DNS only (grey cloud), not proxied.
+              </li>
+              <li>
+                The Convex dashboard shows a green checkmark on the custom
+                domain.
+              </li>
+              <li>
+                Test in incognito, or point your resolver at 1.1.1.1 to skip
+                ISP DNS cache.
+              </li>
+            </ul>
+            <p>
+              <span className="text-white">Optional: make the domain the
+              primary endpoint.</span> If you want your Convex functions and
+              file URLs served from the custom domain, not just the website,
+              override <K>CONVEX_CLOUD_URL</K> under Override Environment
+              Variables on the same deployment settings page, then run{" "}
+              <K>npm run deploy</K> again so the frontend picks up the new
+              URL. <K>CONVEX_SITE_URL</K> works the same way for HTTP
+              actions and affects auth redirect URLs. Details are in the{" "}
+              <Ext href="https://docs.convex.dev/production/custom-domains">
+                Convex custom domains docs
+              </Ext>
+              .
             </p>
           </Section>
 

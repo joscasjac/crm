@@ -192,6 +192,31 @@ export default defineSchema({
     agentBrief: v.optional(v.string()),
   }).index("by_entity_and_key", ["entity", "key"]),
 
+  // Per-entity table preferences and record defaults, one row per entity.
+  // Column prefs are stored sparsely: only keys the user touched appear, and
+  // the array order is the display order. Unknown keys are ignored on read so
+  // renamed or archived fields degrade cleanly.
+  tableSettings: defineTable({
+    entity: v.union(
+      v.literal("company"),
+      v.literal("contact"),
+      v.literal("deal"),
+    ),
+    columns: v.array(
+      v.object({
+        key: v.string(),
+        label: v.optional(v.string()),
+        hidden: v.optional(v.boolean()),
+        pinned: v.optional(v.boolean()),
+      }),
+    ),
+    defaultOwnerId: v.optional(v.id("users")),
+    defaultIndustry: v.optional(v.string()),
+    defaultStage: v.optional(dealStage),
+    defaultCurrency: v.optional(v.string()),
+    autoEnrich: v.optional(v.boolean()),
+  }).index("by_entity", ["entity"]),
+
   fieldValues: defineTable({
     fieldId: v.id("fieldDefinitions"),
     // The record this value belongs to, as a string id into companies,

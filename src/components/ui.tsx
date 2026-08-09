@@ -259,24 +259,223 @@ export function NumberInput({
   );
 }
 
+// A themed calendar popover so date picks stay in the app palette instead of
+// the OS date control. Value is a local YYYY-MM-DD string; empty means unset.
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const toDateString = (year: number, month: number, day: number) =>
+  `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+export function DateInput({
+  value,
+  onChange,
+  className = "",
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const today = new Date();
+  const selected = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? {
+        year: Number(value.slice(0, 4)),
+        month: Number(value.slice(5, 7)) - 1,
+        day: Number(value.slice(8, 10)),
+      }
+    : null;
+
+  // The month shown in the grid; starts at the selection or today.
+  const [view, setView] = useState({
+    year: selected?.year ?? today.getFullYear(),
+    month: selected?.month ?? today.getMonth(),
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const shiftMonth = (delta: number) => {
+    setView((v) => {
+      const next = new Date(v.year, v.month + delta, 1);
+      return { year: next.getFullYear(), month: next.getMonth() };
+    });
+  };
+
+  const firstWeekday = new Date(view.year, view.month, 1).getDay();
+  const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
+  const cells: Array<number | null> = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  const label = selected
+    ? `${MONTH_NAMES[selected.month].slice(0, 3)} ${selected.day}${
+        selected.year !== today.getFullYear() ? `, ${selected.year}` : ""
+      }`
+    : "Pick a date";
+
+  const chevron = (left: boolean) => (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {left ? <path d="m15 6-6 6 6 6" /> : <path d="m9 6 6 6-6 6" />}
+    </svg>
+  );
+
+  return (
+    <div ref={rootRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex w-full items-center justify-between gap-2 rounded-md border border-edge bg-ink px-2 py-1 text-left text-xs transition-colors hover:border-edge-strong focus:border-accent focus:outline-none ${
+          selected ? "text-neutral-300" : "text-neutral-500"
+        }`}
+      >
+        <span className="truncate">{label}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="shrink-0 text-neutral-500"
+        >
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M8 3v4M16 3v4M3 10h18" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-30 mt-1 w-56 rounded-md border border-edge bg-panel p-2 shadow-xl">
+          <div className="mb-1 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => shiftMonth(-1)}
+              aria-label="Previous month"
+              className="rounded p-1 text-neutral-500 transition-colors hover:bg-raised hover:text-white"
+            >
+              {chevron(true)}
+            </button>
+            <span className="text-xs font-medium text-white">
+              {MONTH_NAMES[view.month]} {view.year}
+            </span>
+            <button
+              type="button"
+              onClick={() => shiftMonth(1)}
+              aria-label="Next month"
+              className="rounded p-1 text-neutral-500 transition-colors hover:bg-raised hover:text-white"
+            >
+              {chevron(false)}
+            </button>
+          </div>
+          <div className="grid grid-cols-7 text-center">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <span key={i} className="py-1 text-[10px] text-neutral-600">
+                {d}
+              </span>
+            ))}
+            {cells.map((day, i) => {
+              if (day === null) return <span key={i} />;
+              const isSelected =
+                selected !== null &&
+                selected.year === view.year &&
+                selected.month === view.month &&
+                selected.day === day;
+              const isToday =
+                view.year === today.getFullYear() &&
+                view.month === today.getMonth() &&
+                day === today.getDate();
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    onChange(toDateString(view.year, view.month, day));
+                    setOpen(false);
+                  }}
+                  className={`rounded py-1 text-[11px] transition-colors ${
+                    isSelected
+                      ? "bg-primary text-primary-ink"
+                      : isToday
+                        ? "text-accent hover:bg-raised"
+                        : "text-neutral-400 hover:bg-raised hover:text-white"
+                  }`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // A themed checkbox; the native control only takes an accent color, which is
 // enough to stop it flashing OS blue on the dark canvas.
 export function Checkbox({
   checked,
   onChange,
   ariaLabel,
+  disabled,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <input
       type="checkbox"
       aria-label={ariaLabel}
       checked={checked}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.checked)}
-      className="h-3.5 w-3.5 cursor-pointer rounded border-edge"
+      className="h-3.5 w-3.5 cursor-pointer rounded border-edge disabled:cursor-default disabled:opacity-40"
       style={{ accentColor: "var(--color-primary)" }}
     />
   );

@@ -28,7 +28,7 @@ const SLASH_COMMANDS = [
   },
   {
     command: "/task",
-    hint: "Add a task, no model needed",
+    hint: "Add a task ('in 3 days' or 'on Aug 15')",
     template: "/task ",
   },
   {

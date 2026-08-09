@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ComposeEmail } from "../components/ComposeEmail";
+import { FieldCell } from "../components/dataTable";
 import { TimelinePanel } from "../components/Timeline";
 import {
   Avatar,
@@ -179,24 +180,28 @@ function Overview({ company }: { company: CompanyData }) {
         <h3 className="mb-2 text-sm font-medium text-white">Custom fields</h3>
         {fields && fields.length === 0 ? (
           <p className="text-sm text-neutral-600">
-            No custom fields defined. Add them in Settings.
+            No custom fields defined. Add them in Settings under Companies.
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {fields?.map((field) => (
               <div
                 key={field.definition._id}
-                className="flex items-center justify-between text-sm"
+                className="flex items-center justify-between gap-3 text-sm"
               >
-                <span className="text-neutral-500">
+                <span className="shrink-0 text-neutral-500">
                   {field.definition.label}
                   {field.definition.agentFilled ? (
                     <span className="ml-2 text-[10px] text-accent">agent</span>
                   ) : null}
                 </span>
-                <span className="text-neutral-200">
-                  {field.value ?? "—"}
-                </span>
+                <div className="min-w-0 max-w-56 flex-1 text-right">
+                  <FieldCell
+                    definition={field.definition}
+                    entityId={company._id}
+                    value={field.value ?? undefined}
+                  />
+                </div>
               </div>
             ))}
           </div>

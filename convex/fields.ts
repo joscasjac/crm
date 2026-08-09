@@ -83,6 +83,45 @@ export const createDefinition = writeMutation({
   },
 });
 
+// Rename a field or adjust its select options and agent brief. The key is
+// immutable: values join on the definition id, so only the label moves.
+export const updateDefinition = writeMutation({
+  args: {
+    fieldId: v.id("fieldDefinitions"),
+    label: v.optional(v.string()),
+    options: v.optional(v.array(v.string())),
+    agentFilled: v.optional(v.boolean()),
+    agentBrief: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const definition = await ctx.db.get("fieldDefinitions", args.fieldId);
+    if (!definition) throw new Error("Field not found");
+    const patch: Record<string, unknown> = {};
+    if (args.label !== undefined) {
+      const label = args.label.trim();
+      if (!label) throw new Error("Label cannot be empty");
+      patch.label = label;
+    }
+    if (args.options !== undefined) {
+      if (definition.type !== "select") {
+        throw new Error("Options only apply to select fields");
+      }
+      const options = args.options.map((o) => o.trim()).filter(Boolean);
+      if (options.length === 0) {
+        throw new Error("Select fields need at least one option");
+      }
+      patch.options = options;
+    }
+    if (args.agentFilled !== undefined) patch.agentFilled = args.agentFilled;
+    if (args.agentBrief !== undefined) {
+      patch.agentBrief = args.agentBrief.trim() || undefined;
+    }
+    await ctx.db.patch("fieldDefinitions", args.fieldId, patch);
+    return null;
+  },
+});
+
 // Archiving keeps the values. The definition disappears from forms but the
 // data survives, matching upstream.
 export const archiveDefinition = writeMutation({
@@ -91,6 +130,66 @@ export const archiveDefinition = writeMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch("fieldDefinitions", args.fieldId, { archived: true });
     return null;
+  },
+});
+
+export const restoreDefinition = writeMutation({
+  args: { fieldId: v.id("fieldDefinitions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch("fieldDefinitions", args.fieldId, { archived: false });
+    return null;
+  },
+});
+
+// Batch read for table views: every active definition for the entity plus
+// values for the visible rows, keyed as `${fieldId}:${entityId}`. One
+// subscription per table instead of one per row.
+export const tableValues = query({
+  args: { entity: entityValidator, entityIds: v.array(v.string()) },
+  returns: v.object({
+    definitions: v.array(
+      v.object({
+        _id: v.id("fieldDefinitions"),
+        _creationTime: v.number(),
+        entity: entityValidator,
+        key: v.string(),
+        label: v.string(),
+        type: v.union(
+          v.literal("text"),
+          v.literal("number"),
+          v.literal("select"),
+          v.literal("date"),
+        ),
+        options: v.optional(v.array(v.string())),
+        order: v.number(),
+        archived: v.boolean(),
+        agentFilled: v.boolean(),
+        agentBrief: v.optional(v.string()),
+      }),
+    ),
+    values: v.record(v.string(), v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const definitions = await ctx.db
+      .query("fieldDefinitions")
+      .withIndex("by_entity_and_key", (q) => q.eq("entity", args.entity))
+      .collect();
+    const active = definitions
+      .filter((d) => !d.archived)
+      .sort((a, b) => a.order - b.order);
+
+    const values: Record<string, string> = {};
+    for (const entityId of args.entityIds) {
+      const rows = await ctx.db
+        .query("fieldValues")
+        .withIndex("by_entityId", (q) => q.eq("entityId", entityId))
+        .collect();
+      for (const row of rows) {
+        values[`${row.fieldId}:${entityId}`] = row.value;
+      }
+    }
+    return { definitions: active, values };
   },
 });
 

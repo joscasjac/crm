@@ -6,6 +6,7 @@ import { logEvent } from "./logs";
 import { deleteCompanyCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
+import { entityDefaults } from "./tableSettings";
 
 // Lightweight picker list for forms.
 export const names = query({
@@ -117,15 +118,18 @@ export const create = writeMutation({
         throw new Error(`A company with domain ${args.domain} already exists`);
       }
     }
+    const defaults = await entityDefaults(ctx, "company");
     const companyId = await ctx.db.insert("companies", {
       name: args.name,
       domain: args.domain,
-      industry: args.industry,
+      industry: args.industry ?? defaults.industry,
+      ownerId: defaults.ownerId,
       enrichmentStatus: "NONE",
       lastActivityAt: Date.now(),
     });
-    // A new company with a domain gets enrichment queued automatically.
-    if (args.domain) {
+    // A new company with a domain gets enrichment queued automatically,
+    // unless the workspace turned auto enrich off in settings.
+    if (args.domain && defaults.autoEnrich !== false) {
       await ctx.db.insert("agentTasks", {
         kind: "ENRICH_COMPANY",
         state: "open",
@@ -140,7 +144,7 @@ export const create = writeMutation({
       kind: "M",
       fn: "companies:create",
       status: "success",
-      message: `Created ${args.name}${args.domain ? ` (${args.domain}), enrichment queued` : ""}`,
+      message: `Created ${args.name}${args.domain && defaults.autoEnrich !== false ? ` (${args.domain}), enrichment queued` : args.domain ? ` (${args.domain})` : ""}`,
     });
     await notifySlack(
       ctx,

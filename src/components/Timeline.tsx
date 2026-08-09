@@ -3,8 +3,16 @@ import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { Badge, Button, Checkbox, Input, NumberInput, Panel } from "./ui";
-import { timeAgo } from "../lib/format";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  DateInput,
+  Input,
+  NumberInput,
+  Panel,
+} from "./ui";
+import { shortDate, timeAgo } from "../lib/format";
 
 // The shared notes-and-tasks surface used by company and contact detail.
 // Every write goes through activities.create, which also feeds the Activity
@@ -29,7 +37,9 @@ export function TimelineComposer({
 
   const [mode, setMode] = useState<"NOTE" | "TASK">("NOTE");
   const [body, setBody] = useState("");
+  const [dueMode, setDueMode] = useState<"days" | "date">("days");
   const [dueDays, setDueDays] = useState("3");
+  const [dueDate, setDueDate] = useState("");
   const [remind, setRemind] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +49,16 @@ export function TimelineComposer({
         ? capabilities.agentmail
         : capabilities.resend
       : false;
+
+  // A calendar pick lands at 9:00 local so the task never reads as due the
+  // night before; an empty pick falls back to the "in days" value.
+  const dueAtFromInputs = (): number => {
+    if (dueMode === "date" && /^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+      const [year, month, day] = dueDate.split("-").map(Number);
+      return new Date(year, month - 1, day, 9).getTime();
+    }
+    return Date.now() + Math.max(0, Number(dueDays) || 0) * DAY;
+  };
 
   const submit = async () => {
     const trimmed = body.trim();
@@ -50,10 +70,7 @@ export function TimelineComposer({
         body: trimmed,
         companyId,
         contactId,
-        dueAt:
-          mode === "TASK"
-            ? Date.now() + Math.max(0, Number(dueDays) || 0) * DAY
-            : undefined,
+        dueAt: mode === "TASK" ? dueAtFromInputs() : undefined,
         remindMe: mode === "TASK" ? remind : undefined,
       });
       setBody("");
@@ -98,14 +115,40 @@ export function TimelineComposer({
       {mode === "TASK" ? (
         <div className="flex flex-wrap items-center gap-3 pl-1 text-xs text-neutral-500">
           <span className="flex items-center gap-2">
-            due in
-            <NumberInput
-              value={dueDays}
-              onChange={setDueDays}
-              min={0}
-              className="w-20"
-            />
-            days
+            due
+            <span className="flex shrink-0 rounded-md border border-edge p-0.5">
+              {(["days", "date"] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setDueMode(option)}
+                  className={`rounded px-2 py-0.5 transition-colors ${
+                    dueMode === option
+                      ? "bg-raised text-white"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {option === "days" ? "in days" : "on date"}
+                </button>
+              ))}
+            </span>
+            {dueMode === "days" ? (
+              <>
+                <NumberInput
+                  value={dueDays}
+                  onChange={setDueDays}
+                  min={0}
+                  className="w-20"
+                />
+                days
+              </>
+            ) : (
+              <DateInput
+                value={dueDate}
+                onChange={setDueDate}
+                className="w-28"
+                ariaLabel="Task due date"
+              />
+            )}
           </span>
           <label className="flex cursor-pointer items-center gap-1.5">
             <Checkbox checked={remind} onChange={setRemind} ariaLabel="Email me a reminder" />
@@ -169,7 +212,9 @@ export function TimelineFeed({
                   >
                     {overdue
                       ? "overdue"
-                      : `due in ${Math.max(1, Math.round((activity.dueAt - Date.now()) / DAY))}d`}
+                      : activity.dueAt - Date.now() > 7 * DAY
+                        ? `due ${shortDate(activity.dueAt)}`
+                        : `due in ${Math.max(1, Math.round((activity.dueAt - Date.now()) / DAY))}d`}
                   </span>
                 ) : null}
               </span>

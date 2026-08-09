@@ -5,6 +5,7 @@ import { logEvent } from "./logs";
 import { deleteContactCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
+import { entityDefaults } from "./tableSettings";
 
 export const list = query({
   args: {
@@ -78,11 +79,13 @@ export const create = writeMutation({
         throw new Error(`A contact with email ${args.email} already exists`);
       }
     }
+    const defaults = await entityDefaults(ctx, "contact");
     const contactId = await ctx.db.insert("contacts", {
       name: args.name,
       email: args.email,
       title: args.title,
       companyId: args.companyId,
+      ownerId: defaults.ownerId,
       lastActivityAt: Date.now(),
     });
     await logEvent(ctx, {
