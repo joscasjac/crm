@@ -38,6 +38,10 @@
         document.documentElement.classList.add("light");
       }
     </script>
+
+    <!-- Rybbit analytics. Deferred so it never blocks first paint; the SPA
+         router means this one tag covers every page. -->
+    <script src="https://app.rybbit.io/api/script.js" data-site-id="b6159d6f09ad" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>

@@ -455,8 +455,9 @@ export function DateInput({
   );
 }
 
-// A themed checkbox; the native control only takes an accent color, which is
-// enough to stop it flashing OS blue on the dark canvas.
+// A themed checkbox drawn from scratch. appearance-none removes the native
+// control; the box is an inset well that fills with the accent color and a
+// check that scales in. It stays a real input so wrapping labels keep working.
 export function Checkbox({
   checked,
   onChange,
@@ -469,15 +470,28 @@ export function Checkbox({
   disabled?: boolean;
 }) {
   return (
-    <input
-      type="checkbox"
-      aria-label={ariaLabel}
-      checked={checked}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.checked)}
-      className="h-3.5 w-3.5 cursor-pointer rounded border-edge disabled:cursor-default disabled:opacity-40"
-      style={{ accentColor: "var(--color-primary)" }}
-    />
+    <span className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center">
+      <input
+        type="checkbox"
+        aria-label={ariaLabel}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-edge-strong bg-ink transition-colors duration-150 hover:border-neutral-500 checked:border-accent checked:bg-accent checked:hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-40"
+      />
+      <svg
+        viewBox="0 0 12 12"
+        aria-hidden="true"
+        className="pointer-events-none absolute h-3 w-3 scale-50 opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2.5 6.5 5 9l4.5-5.5" />
+      </svg>
+    </span>
   );
 }
 

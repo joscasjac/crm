@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: "fork-and-setup", label: "Fork and set it up" },
   { id: "environment-variables", label: "Environment variables" },
   { id: "email", label: "Email: Resend and AgentMail" },
+  { id: "email-dns", label: "Email DNS with Cloudflare" },
   { id: "slack", label: "Slack: notifications and the bot" },
   { id: "web-research", label: "Web research: Firecrawl, Exa, Context.dev" },
   { id: "ai-providers", label: "AI providers: OpenAI, Claude, OpenRouter" },
@@ -605,6 +606,163 @@ npx convex env set RESEND_API_KEY re_... --prod  # production`}</Code>
             </p>
           </Section>
 
+          <Section id="email-dns" title="Email DNS with Cloudflare">
+            <p>
+              Sending email from <K>you@yourdomain.com</K> needs DNS records
+              that prove your provider is allowed to send for your domain.
+              Three record types do that job: SPF lists the servers allowed
+              to send, DKIM signs each message so receivers can check it was
+              not altered, and DMARC tells receivers what to do when a check
+              fails. Both providers hand you the exact values to paste, so
+              this is copy and paste work. The Cloudflare reference is{" "}
+              <Ext href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/email-records/">
+                set up email records
+              </Ext>
+              .
+            </p>
+            <p>Two rules apply to every record on this page:</p>
+            <ul className="flex list-disc flex-col gap-2 pl-5">
+              <li>
+                <span className="text-white">Everything is DNS only.</span>{" "}
+                Every email record goes into Cloudflare with the grey cloud,
+                never Proxied. A proxied record hides the real value from
+                mail servers and verification fails.
+              </li>
+              <li>
+                <span className="text-white">One SPF record per name.</span>{" "}
+                If a name already has an SPF TXT record, merge the new{" "}
+                <K>include:</K> into it instead of adding a second record.
+                Two SPF records on one name break both.
+              </li>
+            </ul>
+            <p>
+              Both providers recommend a sending subdomain, like{" "}
+              <K>send.yourdomain.com</K>, instead of the root domain. It
+              keeps your root MX records free for regular mail and separates
+              sending reputation. Using a different subdomain per provider
+              also means their SPF records never touch each other.
+            </p>
+            <p>
+              <span className="text-white">Resend, the fast path.</span> On
+              the{" "}
+              <Ext href="https://resend.com/domains">Resend domains page</Ext>
+              , add your domain, then click Sign in to Cloudflare. This uses
+              Domain Connect to write the records into your zone for you.
+              Authorize it, wait a few minutes, done. If that works you can
+              skip the manual table below.
+            </p>
+            <p>
+              <span className="text-white">Resend, the manual path.</span>{" "}
+              Add the domain in Resend, then copy each record it shows into
+              Cloudflare under DNS, Records. The values are unique per
+              domain; these are the shapes to expect:
+            </p>
+            <div className="overflow-x-auto rounded-lg border border-edge">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-edge bg-panel text-xs text-neutral-500">
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Content</th>
+                    <th className="px-3 py-2 font-medium">Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-edge/60 align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      MX
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      send
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
+                      feedback-smtp.us-east-1.amazonses.com
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">10</td>
+                  </tr>
+                  <tr className="border-b border-edge/60 align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      TXT
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      send
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
+                      "v=spf1 include:amazonses.com ~all"
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">n/a</td>
+                  </tr>
+                  <tr className="align-top">
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      TXT
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
+                      resend._domainkey
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
+                      p=... (DKIM key from Resend)
+                    </td>
+                    <td className="px-3 py-2 text-neutral-500">n/a</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Type only the name part in Cloudflare; it appends your domain
+              on its own, so <K>send</K> becomes{" "}
+              <K>send.yourdomain.com</K>. Then click Verify DNS Records back
+              in Resend. Verification usually lands in minutes. Full guide:{" "}
+              <Ext href="https://resend.com/docs/knowledge-base/cloudflare">
+                Resend on Cloudflare
+              </Ext>
+              . Once verified, set the key and pick a from address on that
+              domain in Settings, Email:
+            </p>
+            <Code>{`npx convex env set RESEND_API_KEY re_...
+npx convex env set RESEND_API_KEY re_... --prod  # production`}</Code>
+            <p>
+              To also receive mail through Resend, toggle Receiving on the
+              domain page and add the inbound MX record it shows, on a
+              subdomain, so it never competes with your regular mail.
+            </p>
+            <p>
+              <span className="text-white">AgentMail.</span> No DNS needed to
+              start: every inbox gets an address on <K>agentmail.to</K>, so{" "}
+              <K>AGENTMAIL_API_KEY</K> and <K>AGENTMAIL_INBOX_ID</K> are
+              enough to send today. A custom domain is only for a branded
+              from address. In the{" "}
+              <Ext href="https://console.agentmail.to">AgentMail console</Ext>
+              , open Domains, click Add Domain, and it returns the exact
+              records for your domain: an SPF TXT record (
+              <K>v=spf1 include:agentmail.to ~all</K>), a DKIM selector TXT
+              record, a DMARC TXT record, and an MX record you only need if
+              the inbox should receive mail on your domain. Add each one in
+              Cloudflare as DNS only, then verify in the console. Guides:{" "}
+              <Ext href="https://www.agentmail.to/docs/knowledge-base/custom-domain-setup">
+                custom domain setup
+              </Ext>{" "}
+              and{" "}
+              <Ext href="https://www.agentmail.to/docs/knowledge-base/spf-dkim-dmarc">
+                SPF, DKIM, and DMARC
+              </Ext>
+              .
+            </p>
+            <p>
+              Inbound mail for AgentMail arrives through the webhook covered
+              in the{" "}
+              <a
+                href="#email"
+                className="text-accent underline decoration-edge underline-offset-2"
+              >
+                email section
+              </a>
+              : register{" "}
+              <K>{`https://YOUR-DEPLOYMENT.convex.site/agentmail/webhook`}</K>{" "}
+              in the AgentMail dashboard, or the same path on your custom
+              domain once it is set up.
+            </p>
+          </Section>
+
           <Section id="slack" title="Slack: notifications and the bot">
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-[13px] leading-relaxed text-amber-200/90">
               <span className="font-medium">Untested.</span> This integration
@@ -961,44 +1119,43 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
             <p>
               The static hosting component serves this site at your{" "}
               <K>*.convex.site</K> URL. To serve it from a domain you own,
-              point Cloudflare DNS at Convex and add the domain in the Convex
-              dashboard. This walkthrough assumes the app lives at{" "}
-              <K>www.yourdomain.com</K> and that bare <K>yourdomain.com</K>{" "}
-              redirects there. Replace <K>yourdomain.com</K> with your real
-              domain throughout.{" "}
+              register the domain in the Convex dashboard and point
+              Cloudflare DNS at Convex. This walkthrough is the exact setup
+              running on <K>realtimecrm.dev</K>: the bare domain serves the
+              app and <K>www</K> redirects to it. Replace{" "}
+              <K>yourdomain.com</K> with your real domain throughout.{" "}
               <Ext href="https://docs.convex.dev/production/custom-domains">
                 Custom domains
               </Ext>{" "}
-              require a Convex Pro plan.
-            </p>
-            <p>
-              <span className="text-white">1. Add your domain to
-              Cloudflare.</span> Skip this if the domain is already there.
-              Log in to the Cloudflare dashboard, click Add a site, and enter
-              your domain. The Free plan works fine. Cloudflare scans your
-              existing DNS records, then gives you two nameservers to set at
-              your registrar. Propagation can take up to 24 hours but is
-              usually faster. See the{" "}
+              require a Convex Pro plan, and your domain needs to be on
+              Cloudflare already (the Free plan works; the{" "}
               <Ext href="https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/">
-                Cloudflare add a site guide
-              </Ext>
-              .
+                add a site guide
+              </Ext>{" "}
+              covers moving one over).
             </p>
             <p>
-              <span className="text-white">2. Lock down SSL/TLS.</span> Under
-              SSL/TLS, Overview, set the encryption mode to Full (strict).
-              Under SSL/TLS, Edge Certificates, turn Always Use HTTPS on.
-              This step is required: without Always Use HTTPS, plain HTTP
-              requests to the root domain never reach the redirect rule. See
-              the{" "}
-              <Ext href="https://developers.cloudflare.com/ssl/">
-                Cloudflare SSL docs
-              </Ext>
-              .
+              One rule explains most of what follows: the only hostname
+              allowed to point at <K>convex.domains</K> is the one you
+              register in the Convex dashboard. Point any other hostname
+              there and Cloudflare blocks it with error 1014. Getting this
+              wrong, in both directions, caused every failure documented in
+              the troubleshooting list below.
             </p>
             <p>
-              <span className="text-white">3. Add three DNS records.</span>{" "}
-              Go to DNS, Records in Cloudflare and create these:
+              <span className="text-white">1. Add the domain in Convex.</span>{" "}
+              Open your production deployment in the{" "}
+              <Ext href="https://dashboard.convex.dev">Convex dashboard</Ext>{" "}
+              and go to Settings, Custom Domains. Enter{" "}
+              <K>yourdomain.com</K>, bare, no www, and pick HTTP actions as
+              the destination, since the static hosting component serves the
+              site through HTTP routes. Convex shows two records: a CNAME
+              target of <K>convex.domains</K> and a TXT verification token.
+              Keep this tab open.
+            </p>
+            <p>
+              <span className="text-white">2. Add three DNS records.</span>{" "}
+              In Cloudflare, go to DNS, Records and create these:
             </p>
             <div className="overflow-x-auto rounded-lg border border-edge">
               <table className="w-full text-left text-sm">
@@ -1013,16 +1170,16 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
                 <tbody>
                   <tr className="border-b border-edge/60 align-top">
                     <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
-                      A
+                      CNAME
                     </td>
                     <td className="px-3 py-2 font-mono text-[12px] text-neutral-200">
                       @
                     </td>
                     <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
-                      192.0.2.1
+                      convex.domains
                     </td>
                     <td className="px-3 py-2 text-neutral-500">
-                      Proxied (orange cloud on)
+                      Proxied (orange cloud)
                     </td>
                   </tr>
                   <tr className="border-b border-edge/60 align-top">
@@ -1033,10 +1190,10 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
                       www
                     </td>
                     <td className="px-3 py-2 font-mono text-[12px] text-neutral-400">
-                      convex.domains
+                      yourdomain.com
                     </td>
                     <td className="px-3 py-2 text-neutral-500">
-                      DNS only (grey cloud)
+                      Proxied (orange cloud)
                     </td>
                   </tr>
                   <tr className="align-top">
@@ -1047,94 +1204,157 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
                       _convex_domains
                     </td>
                     <td className="px-3 py-2 text-neutral-400">
-                      Verification token from the Convex dashboard
+                      Verification token from step 1
                     </td>
-                    <td className="px-3 py-2 text-neutral-500">
-                      DNS only
-                    </td>
+                    <td className="px-3 py-2 text-neutral-500">DNS only</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <p>
-              The A record uses a dummy IP. Its proxied status lets
-              Cloudflare intercept root traffic and fire the redirect rule;
-              no real traffic reaches that IP. The <K>www</K> CNAME points at
-              Convex hosting and must stay DNS only so Convex can provision
-              the SSL certificate. The TXT token comes from the next step, so
-              come back and fill it in.
+              The <K>@</K> record carries real traffic to Convex; Cloudflare
+              flattens the CNAME at the apex automatically. The <K>www</K>{" "}
+              record points back inside your own zone so the redirect rule
+              in step 4 can catch it. Do not point <K>www</K> at{" "}
+              <K>convex.domains</K>: Convex only registered the bare domain,
+              so that combination is exactly the 1014 error. The TXT record
+              proves to Convex that you own the domain.
             </p>
             <p>
-              <span className="text-white">4. Add the domain in Convex.</span>{" "}
-              Open your production deployment in the Convex dashboard and go
-              to Settings, Custom Domains. Enter <K>www.yourdomain.com</K>{" "}
-              and choose HTTP actions, since the static hosting component
-              serves the site through HTTP routes on <K>convex.site</K>.
-              Convex shows the CNAME and TXT records it expects; copy the TXT
-              verification token into the <K>_convex_domains</K> record in
-              Cloudflare. Wait for the green checkmark. The first request can
-              take up to a minute as Convex mints the SSL certificate.
-            </p>
-            <p>
-              <span className="text-white">5. Redirect root to www.</span> In
-              Cloudflare, go to Rules, Redirect Rules and create a rule named
-              root to www. Match with a custom filter expression where
-              Hostname equals <K>yourdomain.com</K>. For the redirect, pick
-              Dynamic, status 301, check Preserve query string, and use this
-              expression:
-            </p>
-            <Code>{`concat("https://www.yourdomain.com", http.request.uri.path)`}</Code>
-            <p>
-              The expression preview should read{" "}
-              <K>{`(http.host eq "yourdomain.com")`}</K>. See the{" "}
-              <Ext href="https://developers.cloudflare.com/rules/url-forwarding/examples/redirect-root-to-www/">
-                Cloudflare root to www example
+              <span className="text-white">3. Set SSL to Full (strict).</span>{" "}
+              Under SSL/TLS, Overview, set the encryption mode to Full
+              (strict), and under Edge Certificates turn on Always Use
+              HTTPS. Flexible mode causes its own redirect loop, so do not
+              skip this. See the{" "}
+              <Ext href="https://developers.cloudflare.com/ssl/">
+                Cloudflare SSL docs
               </Ext>
               .
             </p>
             <p>
-              <span className="text-white">6. Verify.</span> Allow up to an
-              hour for DNS propagation, then test:
+              <span className="text-white">4. Redirect www to the bare
+              domain.</span> In Cloudflare go to Rules, Overview, Create
+              rule, Redirect Rule. Use the custom filter expression editor
+              and match on exactly this:
             </p>
-            <Code>{`# Should return 301 to https://www.yourdomain.com
-curl -I https://yourdomain.com
+            <Code>{`Field:     Hostname
+Operator:  equals
+Value:     www.yourdomain.com`}</Code>
+            <p>
+              Then set the redirect to Dynamic, status 301, Preserve query
+              string on, with this expression:
+            </p>
+            <Code>{`concat("https://yourdomain.com", http.request.uri.path)`}</Code>
+            <p>
+              The trap here is the hostname. Cloudflare ships a template
+              named Redirect from WWW to root, and if the match field ends
+              up holding <K>yourdomain.com</K> instead of{" "}
+              <K>www.yourdomain.com</K>, the rule redirects the bare domain
+              to itself forever. That is the classic{" "}
+              <K>ERR_TOO_MANY_REDIRECTS</K>, and it is the first thing this
+              setup hit. The match value must be the www host, the target
+              must be the bare host.
+            </p>
+            <p>
+              <span className="text-white">5. Verify in Convex and set the
+              site URL.</span> Back in the Convex dashboard, the domain gets
+              a green checkmark once the TXT record propagates, usually
+              within a couple of minutes. On the same settings page, under
+              Override Environment Variables, set <K>CONVEX_SITE_URL</K> to{" "}
+              <K>https://yourdomain.com</K> so HTTP action URLs and auth
+              redirects use your domain. The first request after
+              verification can take up to a minute while Convex mints the
+              SSL certificate.
+            </p>
+            <p>
+              <span className="text-white">6. Verify from the terminal.</span>
+            </p>
+            <Code>{`# Should return 200 from your app
+curl -sI https://yourdomain.com
 
-# Should return 200 from your app
-curl -I https://www.yourdomain.com
+# Should return 301 with location: https://yourdomain.com/
+curl -sI https://www.yourdomain.com
 
-# HTTP should redirect too, via Always Use HTTPS plus the rule
-curl -I http://yourdomain.com`}</Code>
-            <p>If something is off, check these in order:</p>
+# Plain HTTP should upgrade via Always Use HTTPS
+curl -sI http://yourdomain.com`}</Code>
+            <p>
+              <span className="text-white">Troubleshooting.</span> Every
+              entry below is a failure that happened while setting up{" "}
+              <K>realtimecrm.dev</K>, with the exact cause:
+            </p>
             <ul className="flex list-disc flex-col gap-2 pl-5">
               <li>
-                The root A record is Proxied (orange cloud), not DNS only.
-              </li>
-              <li>Always Use HTTPS is on.</li>
-              <li>
-                The <K>www</K> CNAME is DNS only (grey cloud), not proxied.
-              </li>
-              <li>
-                The Convex dashboard shows a green checkmark on the custom
-                domain.
+                <K>ERR_TOO_MANY_REDIRECTS</K> on the bare domain. The
+                redirect rule is matching the bare hostname and sending it
+                to itself. Edit the rule so the match value is{" "}
+                <K>www.yourdomain.com</K>. Confirm with{" "}
+                <K>curl -sI https://yourdomain.com</K>: a{" "}
+                <K>location:</K> header pointing at the same URL means the
+                rule is still wrong.
               </li>
               <li>
-                Test in incognito, or point your resolver at 1.1.1.1 to skip
-                ISP DNS cache.
+                <K>403 Forbidden</K> with Cloudflare error 1014 on{" "}
+                <K>www</K>. The www record points at{" "}
+                <K>convex.domains</K> but Convex only registered the bare
+                domain. Change the www record content to{" "}
+                <K>yourdomain.com</K> and let the redirect rule handle it.
+              </li>
+              <li>
+                <K>403 Forbidden</K> on the bare domain after it worked
+                before. The domain registered in Convex no longer matches
+                the hostname that CNAMEs to <K>convex.domains</K>. This
+                happened here when the Convex entry was switched to{" "}
+                <K>www.yourdomain.com</K> mid-debug; switching it back to
+                the bare domain fixed it. The two must always agree.
+              </li>
+              <li>
+                <K>403</K> for a minute or two right after adding or
+                re-adding the domain in Convex. Verification and
+                certificate minting are in flight. Wait, then retry.
+              </li>
+              <li>
+                The site works in curl but not in your browser. Browsers
+                cache 301 redirects hard. Test in a private window or clear
+                the cache for the domain.
               </li>
             </ul>
             <p>
-              <span className="text-white">Optional: make the domain the
-              primary endpoint.</span> If you want your Convex functions and
-              file URLs served from the custom domain, not just the website,
-              override <K>CONVEX_CLOUD_URL</K> under Override Environment
-              Variables on the same deployment settings page, then run{" "}
-              <K>npm run deploy</K> again so the frontend picks up the new
-              URL. <K>CONVEX_SITE_URL</K> works the same way for HTTP
-              actions and affects auth redirect URLs. Details are in the{" "}
-              <Ext href="https://docs.convex.dev/production/custom-domains">
-                Convex custom domains docs
-              </Ext>
-              .
+              <span className="text-white">Doing it from the CLI or an
+              agent.</span> The dashboard is fine for one domain, but
+              everything above is also scriptable, which means a coding
+              agent can do it, and the curl checks in step 6 work from any
+              terminal. Create a scoped API token at{" "}
+              <Ext href="https://dash.cloudflare.com/profile/api-tokens">
+                dash.cloudflare.com/profile/api-tokens
+              </Ext>{" "}
+              with Zone, DNS, Edit permission (add Zone, Dynamic URL
+              Redirect, Edit to manage the rule too), then drive the{" "}
+              <Ext href="https://developers.cloudflare.com/api/">
+                Cloudflare API
+              </Ext>{" "}
+              directly:
+            </p>
+            <Code>{`# List records to find the zone state
+curl "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \\
+  --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+
+# Create the apex CNAME
+curl "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \\
+  --request POST \\
+  --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \\
+  --json '{"type":"CNAME","name":"yourdomain.com","content":"convex.domains","proxied":true}'`}</Code>
+            <p>
+              Cloudflare also publishes{" "}
+              <Ext href="https://developers.cloudflare.com/agents/model-context-protocol/mcp-servers-for-cloudflare/">
+                MCP servers
+              </Ext>{" "}
+              you can add to Cursor or another MCP client; the docs server
+              answers configuration questions in place, and the others cover
+              Workers and observability. DNS record edits still go through
+              the API token above, so a good setup for an agent is the docs
+              MCP for reference plus the API token for changes. Hand the
+              agent this section, the token, and your domain, and it can run
+              the whole checklist including verification.
             </p>
           </Section>
 

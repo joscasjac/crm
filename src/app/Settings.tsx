@@ -6,6 +6,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Checkbox,
   Input,
   PageHeader,
   Panel,
@@ -583,7 +584,7 @@ function SlackToggle({
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+          className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
             checked ? "translate-x-[18px]" : "translate-x-0.5"
           }`}
         />
@@ -793,9 +794,9 @@ function SidebarSection() {
               key={item.id}
               className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={!hidden}
+                ariaLabel={`Show ${item.label} in sidebar`}
                 onChange={() => {
                   const current = sidebarPrefs?.hidden ?? [];
                   const next = hidden
@@ -803,7 +804,6 @@ function SidebarSection() {
                     : [...current, item.id];
                   void setSidebarHidden({ hidden: next });
                 }}
-                className="accent-current"
               />
               {item.label}
             </label>

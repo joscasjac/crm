@@ -1,5 +1,80 @@
 # Changelog
 
+## [2.13.8] (2026-08-09)
+
+Landing bento absorbs the agents section and gains Slack, web research, and Ask cards. Timestamp: 2026-08-09 23:20 UTC.
+
+### Changed
+
+- The standalone "Agents that automate your CRM" section is gone; it now lives inside the "What it actually does" bento as a two column card pairing the agent prompt input and seeded prompt examples with a "Your agents" panel showing the deployed Renewal briefer (v1, weekdays 13:00 UTC) and the draft Stale deal flagger, both from the real seed data (`src/pages/Landing.tsx`)
+- Three new bento cards: "Slack hears about it first" mocks a #deals channel message for a Roo Capital stage change plus the `/crm` slash command, "It reads the web for you" mocks the `search_web` (Exa) and `read_page` (Firecrawl) tool call rows ending in a recorded fact, and "One chat runs the whole CRM" mocks a `/task` exchange with the reminder confirmation and slash command chips
+- Grid rebalanced: agent builder and companies span two columns, record chat stays the tall right rail, the three new cards form a middle row, activity log spans two columns with more agent entries, and BYOK keeps the full bottom row. Verified with screenshots in dark and light mode
+
+## [2.13.7] (2026-08-09)
+
+Landing page "What it actually does" rebuilt as a bento with mock UI blocks. Timestamp: 2026-08-09 23:08 UTC.
+
+### Changed
+
+- The "What it actually does" section is now a three column bento (max-w-5xl) where every card pairs its heading with a screenshot style mock UI block built in JSX from the app's own theme tokens: a companies table with real seeded logos and Enriched/Researching badges, a record chat with suggested questions, a question and answer exchange, and an input row, a suggested agents list, a follow-up recheck list with day chips and the WHY note, and a mono activity log strip. All names, domains, deals, and env keys come from the real seeded demo data (`src/pages/Landing.tsx`)
+- New "Bring your own keys" BYOK card spanning two columns groups every optional provider by capability (Chat: OpenAI, Claude, OpenRouter; Research: Context.dev, Firecrawl, Exa; Email: Resend, AgentMail) with the real env key name under each, linking to the environment variables docs section
+- The demo video section moved below "What it actually does" so visitors see what the product does before watching it. Verified with screenshots on localhost:5174 in dark and light mode at desktop and narrow widths
+
+## [2.13.6] (2026-08-09)
+
+Rybbit analytics added. Timestamp: 2026-08-09 23:00 UTC.
+
+### Added
+
+- Rybbit analytics script in the head of `index.html`, deferred so it never blocks first paint. The SPA router means the one tag covers every page: landing, compare, docs, and the app
+
+## [2.13.5] (2026-08-09)
+
+Landing page demo notes redesigned as a linked bullet list. Timestamp: 2026-08-09 22:58 UTC.
+
+### Changed
+
+- The "What the demo does and does not do" section on the landing page is now a bullet list with visible dot markers, a soft accent highlight on the config phrase in each line, environment variable names rendered as tinted mono pills, and a docs link on every bullet pointing at the matching section (using the app, fork and set it up, auth, email, Slack, web research, AI providers). The accent token remaps under html.light so the highlights stay readable in both themes; verified with screenshots in dark and light mode (`src/pages/Landing.tsx`)
+
+## [2.13.4] (2026-08-09)
+
+Custom themed checkboxes across the app. Timestamp: 2026-08-09 22:50 UTC.
+
+### Changed
+
+- The shared Checkbox in `src/components/ui.tsx` is now drawn from scratch: `appearance-none` on the native input, an inset dark well with a subtle border, an accent-blue fill on check, and a white checkmark that scales and fades in over 150ms. Hover brightens the border, keyboard focus gets an accent outline, disabled drops to 40 percent opacity. It stays a real input so wrapping labels and keyboard toggling keep working
+- The sidebar preferences section in Settings (`src/app/Settings.tsx`) swapped its last native checkbox for the shared Checkbox, so every checkbox in the app (column choosers, select-all in tables and Activity, entity settings, timeline, sidebar prefs) renders the same themed control
+
+## [2.13.3] (2026-08-09)
+
+Footer credit line update. Timestamp: 2026-08-09 22:45 UTC.
+
+### Changed
+
+- The footer credit line on the homepage and Compare page now reads "Made with Cursor, Claude Fable and DNS Cloudflare." with links to cursor.com, claude.com, and the Cloudflare DNS docs (`src/pages/Landing.tsx`)
+
+## [2.13.2] (2026-08-09)
+
+Custom domain docs rewritten from the live realtimecrm.dev setup, plus a new email DNS guide. Timestamp: 2026-08-09 22:35 UTC.
+
+### Added
+
+- New "Email DNS with Cloudflare" docs section covering SPF, DKIM, and DMARC in plain language, the two Cloudflare rules (every email record is DNS only, one SPF record per name), the sending subdomain recommendation, Resend setup via Domain Connect or the manual three-record table, AgentMail's zero-DNS default plus custom domain records from the console, and the inbound webhook cross-link (`src/pages/Docs.tsx`)
+
+### Changed
+
+- The "Custom domain with Cloudflare" docs section now documents the apex-first setup verified live on realtimecrm.dev: apex CNAME to `convex.domains` proxied, `www` CNAME back to the apex proxied, TXT verification record, Full (strict) SSL, and a www-to-root redirect rule matching `www.yourdomain.com` exactly; replaces the earlier www-primary walkthrough with the dummy A record (`src/pages/Docs.tsx`)
+- Added a troubleshooting list where every entry is a failure hit during the real setup with its cause: the redirect rule matching the apex (ERR_TOO_MANY_REDIRECTS), `www` pointed at `convex.domains` (Cloudflare error 1014), the Convex domain entry drifting from the DNS hostname (403), certificate minting delay, and browser-cached 301s (`src/pages/Docs.tsx`)
+- The custom domain section closes with CLI and agent options: a scoped Cloudflare API token with curl examples for listing and creating records, and Cloudflare's MCP servers for docs lookups alongside the API for changes (`src/pages/Docs.tsx`)
+
+## [2.13.1] (2026-08-09)
+
+Clearer Cloudflare root to www redirect docs. Timestamp: 2026-08-09 20:05 UTC.
+
+### Changed
+
+- Step 5 of the custom domain docs section now follows Cloudflare's current wildcard pattern guidance: match `https://yourdomain.com/*`, target `https://www.yourdomain.com/${1}` with a 301 and preserve query string, created under Rules, Overview, Create rule; the older custom filter expression with `concat()` stays documented as an equivalent alternative (`src/pages/Docs.tsx`)
+
 ## [2.13.0] (2026-08-09)
 
 Per-entity settings, renameable columns, custom field columns, and an upgraded table view. Timestamp: 2026-08-09 19:55 UTC.

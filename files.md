@@ -10,7 +10,7 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `vite.config.ts` | Vite with React and Tailwind 4 plugins |
 | `tsconfig.json` | Project references to the app and convex tsconfigs |
 | `tsconfig.app.json` | Frontend TypeScript config, strict mode |
-| `index.html` | Vite entry HTML |
+| `index.html` | Vite entry HTML with meta tags, the pre-paint theme script, and the Rybbit analytics tag |
 | `README.md` | Project overview, quick start, configuration, deploy guide |
 | `CHANGELOG.md` | Convex port entries (2.0.0 through 2.4.0) on top of the upstream history |
 | `task.md` | Work tracking for this port |
@@ -68,7 +68,7 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `lib/format.ts` | Money, relative time, short dates, stage labels, initials |
 | `lib/columns.ts` | Column registry for the three entity tables: built-in column definitions, custom field column keys, merge of saved preferences with active fields |
 | `components/dataTable.tsx` | Shared table infrastructure: `useEntityTable` and `useStickyColumns` hooks, portal header menu (sort, pin, hide, reset), Columns chooser dropdown, click-to-edit custom field cell |
-| `components/ui.tsx` | Panel, buttons, inputs, themed Select and NumberInput and Checkbox and DateInput calendar, avatars, badges, empty states |
+| `components/ui.tsx` | Panel, buttons, inputs, themed Select and NumberInput and DateInput calendar, custom-drawn accent Checkbox with animated checkmark, avatars, badges, empty states |
 | `components/Timeline.tsx` | Shared notes-and-tasks composer and feed for company and contact detail, with due dates in days or from a calendar, reminders, and complete buttons |
 | `components/ComposeEmail.tsx` | Floating compose window: draggable, resizable, To/Cc/Bcc/Subject, markdown body with preview, Convex storage attachments, provider-aware Send |
 | `components/ShortcutsModal.tsx` | Themed keyboard shortcuts modal, opened from the sidebar footer icon or ⌘? |
@@ -87,9 +87,9 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `app/Agents.tsx` | Agent builder: describe a process, manage drafts, deploy, pause |
 | `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Companies, Contacts, Deals (per-entity defaults, columns, custom fields), Integrations (with the "Adding API keys" panel), Slack (master switch, event toggles, channel picker with search, test button, /crm bot), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide |
 | `app/EntitySettingsSection.tsx` | The per-entity settings body: new-record defaults panel, column list with inline rename plus show and pin toggles, custom fields manager with type-specific creation, option editing, archive and restore |
-| `pages/Landing.tsx` | Marketing page: hero with copy prompt and git clone one-liner, built-with, agent sections, 20 second demo video, demo notes |
+| `pages/Landing.tsx` | Marketing page: hero with copy prompt and git clone one-liner, built-with, "What it actually does" bento with JSX mock UI blocks (agent builder with deployed agents, companies table, record chat, Slack message, web research tool calls, Ask slash commands, rechecks, activity log, BYOK key groups), demo video, demo notes as a bullet list with accent highlights and per-line docs links |
 | `pages/Compare.tsx` | Upstream vs Convex comparison table |
-| `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar, sidebar search over section titles and body text, and active-section highlight: fork, env vars, email and compose, Slack, web research, AI providers, auth, deploy, coding agents |
+| `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar, sidebar search over section titles and body text, and active-section highlight: fork, env vars, email and compose, email DNS with Cloudflare, Slack, web research, AI providers, auth, deploy, custom domain with Cloudflare, coding agents |
 
 ## public/
 
@@ -105,4 +105,4 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 
 ## docs/
 
-Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), `prds/slack-integration.md` (Slack notifications and the /crm bot), and `prds/task-due-date-calendar.md` (calendar due dates for tasks).
+Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), `prds/slack-integration.md` (Slack notifications and the /crm bot), `prds/task-due-date-calendar.md` (calendar due dates for tasks), and `prds/landing-what-it-does-bento.md` (landing bento with mock UI blocks and BYOK).

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
 
@@ -16,9 +16,8 @@ export function Landing() {
       <main>
         <Hero />
         <BuiltWith />
-        <AgentsSection />
-        <DemoVideo />
         <WhatItDoes />
+        <DemoVideo />
         <DemoNotes />
         <ForkIt />
       </main>
@@ -215,32 +214,6 @@ function BuiltWith() {
   );
 }
 
-function AgentsSection() {
-  return (
-    <section className="mx-auto max-w-3xl px-4 py-14">
-      <h2 className="text-2xl font-semibold text-white">Agents that automate your CRM</h2>
-      <p className="mt-2 text-neutral-400">
-        Describe how your CRM should act. Create agents to automate every process. Definitions are
-        data, versions are rows, deploying is a pointer move.
-      </p>
-      <div className="mt-6 rounded-lg border border-edge bg-panel p-6">
-        <p className="text-sm font-semibold text-white">What should we get done?</p>
-        <div className="mt-3 flex flex-col gap-2 text-sm text-neutral-400">
-          <p className="rounded-md bg-ink px-3 py-2">
-            Create a channel and notify the owner when a deal hits Closed won
-          </p>
-          <p className="rounded-md bg-ink px-3 py-2">
-            Brief every deal owner before a renewal call
-          </p>
-          <p className="rounded-md bg-ink px-3 py-2">
-            Every Monday, re-enrich contacts that have not been contacted in 4 weeks
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function DemoVideo() {
   return (
     <section className="mx-auto max-w-4xl px-4 pb-14">
@@ -263,83 +236,577 @@ function DemoVideo() {
   );
 }
 
-function WhatItDoes() {
-  const cards = [
+// ---- WhatItDoes bento. Each card pairs a heading with a mock UI block
+// built in JSX from the app's own tokens, so the blocks follow the theme
+// and never go stale like screenshots. Names, domains, deals, and env keys
+// are the real seeded demo data, not invented placeholders. ----
+
+function BentoCard({
+  title,
+  body,
+  className = "",
+  children,
+}: {
+  title: string;
+  body: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`flex flex-col rounded-lg border border-edge bg-panel p-5 ${className}`}>
+      <h3 className="text-base font-semibold text-white">{title}</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-neutral-400">{body}</p>
+      <div className="mt-4 flex flex-1 flex-col">{children}</div>
+    </div>
+  );
+}
+
+// Tiny all-caps label used inside the mock blocks, like the app's own.
+function MockLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-600">
+      {children}
+    </p>
+  );
+}
+
+// Enrichment badges matching the Pill tones the real Companies table uses.
+function MockEnrichBadge({ state }: { state: "enriched" | "researching" }) {
+  if (state === "enriched") {
+    return (
+      <span className="rounded-full border border-emerald-800 px-2 py-0.5 text-[10px] text-emerald-400">
+        Enriched
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 rounded-full border border-yellow-800 px-2 py-0.5 text-[10px] text-yellow-400">
+      <span className="h-1 w-1 animate-pulse rounded-full bg-yellow-400" />
+      Researching
+    </span>
+  );
+}
+
+// Three seeded companies from the live demo, logos included.
+function MockCompanies() {
+  const rows = [
     {
-      title: "Records fill themselves in",
-      body: "A new company with a domain gets its logo, industry, and description from Context.dev brand data, with the observation logged on the timeline and the evidence recorded in the ledger.",
+      name: "Tawkeed",
+      domain: "tawkeed.ai",
+      logo: "/landing/logos/tawkeed.webp",
+      state: "enriched" as const,
     },
     {
-      title: "Agents that build agents",
-      body: "Describe a process in a sentence and it becomes a draft agent with versioned instructions, on its own queue, on its own schedule.",
+      name: "Roo Capital",
+      domain: "roocapital.com",
+      logo: "/landing/logos/roo-capital.webp",
+      state: "enriched" as const,
     },
     {
-      title: "It books its own follow-ups",
-      body: "Rechecks require a stated reason. An agent that cannot say why it will be back in fourteen days does not have a reason, it has a default.",
-    },
-    {
-      title: "Ask any record a question",
-      body: "The record chat reads your own history with the company and shows its working. No model key configured? It says so instead of pretending.",
-    },
-    {
-      title: "A workspace chat with tools",
-      body: "The Ask page researches across the whole CRM with slash commands for web search and page reading, on OpenAI, Claude, or OpenRouter. Your key, your choice.",
-    },
-    {
-      title: "Watch it work",
-      body: "Command-K searches every record. The Activity page streams function outcomes live, like the Convex dashboard logs, with pause and clear.",
+      name: "AuditBot",
+      domain: "auditbot.co",
+      logo: "/landing/logos/auditbot.webp",
+      state: "researching" as const,
     },
   ];
   return (
-    <section className="mx-auto max-w-4xl px-4 pb-14">
-      <h2 className="text-2xl font-semibold text-white">What it actually does</h2>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {cards.map((card) => (
-          <div key={card.title} className="rounded-lg border border-edge bg-panel p-6">
-            <h3 className="text-base font-semibold text-white">{card.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-400">{card.body}</p>
+    <div className="divide-y divide-edge rounded-md border border-edge bg-ink">
+      {rows.map((row) => (
+        <div key={row.name} className="flex items-center gap-3 px-3 py-2.5">
+          <img src={row.logo} alt="" className="h-5 w-5 rounded" />
+          <span className="text-xs font-medium text-white">{row.name}</span>
+          <span className="ml-auto hidden font-mono text-xs text-neutral-500 sm:block">
+            {row.domain}
+          </span>
+          <MockEnrichBadge state={row.state} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The record chat: suggested questions on top, input pinned to the bottom.
+function MockRecordChat() {
+  const suggestions = ["What do they do?", "Who do we know here?", "What has changed recently?"];
+  return (
+    <div className="flex flex-1 flex-col gap-2">
+      <MockLabel>Suggested</MockLabel>
+      {suggestions.map((q) => (
+        <p key={q} className="rounded-md border border-edge bg-ink px-3 py-2 text-xs text-neutral-300">
+          {q}
+        </p>
+      ))}
+      <div className="mt-auto flex flex-col gap-2 pt-2">
+        <p className="self-end rounded-md bg-raised px-3 py-2 text-xs text-white">
+          Who do we know here?
+        </p>
+        <div className="rounded-md border border-edge bg-ink px-3 py-2">
+          <p className="text-xs leading-relaxed text-neutral-300">
+            Paula Marchetti runs fund ops. Last touch was five days ago on the renewal thread.
+          </p>
+          <p className="mt-1.5 font-mono text-[10px] text-neutral-600">
+            read: timeline &middot; deals &middot; email
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 rounded-md border border-edge bg-ink py-1.5 pl-3 pr-1.5">
+        <span className="flex-1 text-xs text-neutral-600">What do they sell?</span>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-ink">
+          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// The agent builder, absorbing the old standalone AgentsSection: the
+// "What should we get done?" prompt box next to the real seeded agent
+// roster with its deploy state and schedule.
+function MockAgentBuilder() {
+  const prompts = [
+    "Create a channel and notify the owner when a deal hits Closed won",
+    "Brief every deal owner before a renewal call",
+    "Every Monday, re-enrich contacts not touched in 4 weeks",
+  ];
+  return (
+    <div className="grid flex-1 gap-3 sm:grid-cols-[1.4fr_1fr]">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 rounded-md border border-edge bg-ink py-1.5 pl-3 pr-1.5">
+          <span className="flex-1 text-xs text-neutral-600">What should we get done?</span>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-ink">
+            <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </div>
+        {prompts.map((p) => (
+          <p
+            key={p}
+            className="flex items-center justify-between gap-2 rounded-md border border-edge bg-ink px-3 py-2 text-xs text-neutral-400"
+          >
+            {p}
+            <span aria-hidden className="shrink-0 text-neutral-600">
+              &rarr;
+            </span>
+          </p>
+        ))}
+      </div>
+      <div className="rounded-md border border-edge bg-ink p-3">
+        <MockLabel>Your agents</MockLabel>
+        <div className="mt-2 flex flex-col gap-2.5">
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-medium text-white">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Renewal briefer
+            </p>
+            <p className="mt-0.5 font-mono text-[10px] text-neutral-500">
+              v1 deployed &middot; weekdays 13:00 UTC
+            </p>
+          </div>
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-medium text-white">
+              <span className="h-1.5 w-1.5 rounded-full bg-neutral-600" />
+              Stale deal flagger
+            </p>
+            <p className="mt-0.5 font-mono text-[10px] text-neutral-500">draft &middot; not deployed</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// A Slack message the deals channel actually receives, using the real
+// notification format from convex/model/deals.ts and the /crm bot.
+function MockSlack() {
+  return (
+    <div className="flex flex-1 flex-col rounded-md border border-edge bg-ink p-3">
+      <p className="font-mono text-[10px] text-neutral-600"># deals</p>
+      <div className="mt-2.5 flex gap-2.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-ink">
+          C
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs">
+            <span className="font-semibold text-white">CRM</span>{" "}
+            <span className="rounded-sm bg-raised px-1 py-px text-[9px] font-medium text-neutral-500">
+              APP
+            </span>{" "}
+            <span className="text-[10px] text-neutral-600">2:14 PM</span>
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-neutral-300">
+            Deal stage: Roo Capital fund ops: Negotiation &rarr; Closed won
+          </p>
+        </div>
+      </div>
+      <div className="mt-auto flex items-center gap-2 pt-3">
+        <span className="rounded-md border border-edge bg-raised px-2.5 py-1.5 font-mono text-[11px] text-neutral-400">
+          /crm what moved this week?
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// The research tool-call trail: Exa searches, Firecrawl reads the page,
+// and the fact lands with its source attached.
+function MockWebResearch() {
+  return (
+    <div className="flex flex-1 flex-col gap-2">
+      <div className="flex flex-col gap-1.5 rounded-md border border-edge bg-ink p-3 font-mono text-[11px]">
+        <div className="flex items-center gap-2">
+          <span className="text-accent">&#9656;</span>
+          <span className="text-neutral-300">search_web</span>
+          <span className="ml-auto text-neutral-600">exa &middot; 6 results</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-accent">&#9656;</span>
+          <span className="text-neutral-300">read_page</span>
+          <span className="ml-auto text-neutral-600">firecrawl &middot; 2.1s</span>
+        </div>
+        <p className="mt-1 truncate text-neutral-500">auditbot.co/pricing</p>
+      </div>
+      <div className="mt-auto rounded-md border border-edge bg-ink px-3 py-2">
+        <MockLabel>Fact recorded</MockLabel>
+        <p className="mt-1 text-xs leading-relaxed text-neutral-300">
+          Headcount: 12, from the AuditBot about page.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// The Ask page: /task writes to the timeline in the same transaction, no
+// model key involved. The reply text matches convex/ask.ts exactly.
+function MockAsk() {
+  return (
+    <div className="flex flex-1 flex-col gap-2">
+      <p className="self-end rounded-md bg-raised px-3 py-2 font-mono text-[11px] text-white">
+        /task recheck AuditBot on 9/15, email me
+      </p>
+      <div className="rounded-md border border-edge bg-ink px-3 py-2">
+        <p className="text-xs leading-relaxed text-neutral-300">Task added to AuditBot.</p>
+        <p className="mt-1.5 font-mono text-[10px] text-neutral-600">
+          due Sep 15 &middot; email reminder set
+        </p>
+      </div>
+      <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+        {["/task", "/note", "search_web", "read_page"].map((chip) => (
+          <span
+            key={chip}
+            className="rounded border border-edge bg-ink px-1.5 py-0.5 font-mono text-[10px] text-neutral-500"
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Rechecks from the seeded deals, each with a day chip and the reason rule.
+function MockFollowUps() {
+  const items = [
+    { label: "Recheck Paula Marchetti", days: "14d", active: true },
+    { label: "Brief owner: Social Good renewal", days: "2d", active: false },
+    { label: "Re-enrich Roo Capital fund ops", days: "90d", active: false },
+  ];
+  return (
+    <div className="flex flex-1 flex-col gap-2">
+      <div className="divide-y divide-edge rounded-md border border-edge bg-ink">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center gap-2.5 px-3 py-2">
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                item.active ? "bg-emerald-400" : "bg-neutral-600"
+              }`}
+            />
+            <span className="truncate text-xs text-neutral-300">{item.label}</span>
+            <span className="ml-auto font-mono text-[10px] text-neutral-500">{item.days}</span>
           </div>
         ))}
+      </div>
+      <div className="mt-auto pt-1">
+        <MockLabel>Why</MockLabel>
+        <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+          An agent that cannot say why it will be back in fourteen days does not have a reason, it
+          has a default.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Live function stream, like the Activity page and the Convex dashboard logs.
+function MockActivityLog() {
+  const lines = [
+    { kind: "Q", name: "companies.list", detail: "12ms" },
+    { kind: "M", name: "deals.moveStage", detail: "ok" },
+    { kind: "A", name: "web.searchWeb", detail: "exa" },
+    { kind: "A", name: "agents.run.enrich", detail: "4.2s" },
+    { kind: "M", name: "slack.notify", detail: "#deals" },
+    { kind: "M", name: "timeline.append", detail: "ok" },
+  ];
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-edge bg-ink p-3 font-mono text-[11px]">
+      {lines.map((line, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="w-3 text-accent">{line.kind}</span>
+          <span className="text-neutral-300">{line.name}</span>
+          <span className="ml-auto text-neutral-600">{line.detail}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// BYOK: the real env key for every optional provider, grouped by capability.
+function MockByok() {
+  const groups = [
+    {
+      label: "Chat",
+      providers: [
+        { name: "OpenAI", envKey: "OPENAI_API_KEY" },
+        { name: "Claude", envKey: "ANTHROPIC_API_KEY" },
+        { name: "OpenRouter", envKey: "OPENROUTER_API_KEY" },
+      ],
+    },
+    {
+      label: "Research",
+      providers: [
+        { name: "Context.dev", envKey: "CONTEXT_DEV_API_KEY" },
+        { name: "Firecrawl", envKey: "FIRECRAWL_API_KEY" },
+        { name: "Exa", envKey: "EXA_API_KEY" },
+      ],
+    },
+    {
+      label: "Email",
+      providers: [
+        { name: "Resend", envKey: "RESEND_API_KEY" },
+        { name: "AgentMail", envKey: "AGENTMAIL_API_KEY" },
+      ],
+    },
+  ];
+  return (
+    <div className="grid flex-1 gap-3 sm:grid-cols-3">
+      {groups.map((group) => (
+        <div key={group.label} className="rounded-md border border-edge bg-ink p-3">
+          <MockLabel>{group.label}</MockLabel>
+          <div className="mt-2 flex flex-col gap-2">
+            {group.providers.map((p) => (
+              <div key={p.name}>
+                <p className="text-xs font-medium text-white">{p.name}</p>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-neutral-500">{p.envKey}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WhatItDoes() {
+  return (
+    <section className="mx-auto max-w-5xl px-4 py-14">
+      <h2 className="text-2xl font-semibold text-white">What it actually does</h2>
+      <p className="mt-2 max-w-2xl text-neutral-400">
+        Durable agents read your pipeline, write back what they learn, and say why. Every block
+        below is the real product, seeded data and all.
+      </p>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <BentoCard
+          title="Agents that automate your CRM"
+          body="Describe a process in a sentence and it becomes a draft agent with versioned instructions, on its own queue, on its own schedule. Definitions are data, deploying is a pointer move."
+          className="sm:col-span-2"
+        >
+          <MockAgentBuilder />
+        </BentoCard>
+        <BentoCard
+          title="Ask any record a question"
+          body="The record chat reads your own history with the company and shows its working. No model key? It says so instead of pretending."
+          className="sm:col-span-2 lg:col-span-1 lg:row-span-2"
+        >
+          <MockRecordChat />
+        </BentoCard>
+        <BentoCard
+          title="Records fill themselves in"
+          body="A new company with a domain gets its logo, industry, and description from Context.dev brand data, with the evidence recorded in the ledger."
+          className="sm:col-span-2"
+        >
+          <MockCompanies />
+        </BentoCard>
+        <BentoCard
+          title="Slack hears about it first"
+          body="Deal moves post to your channel, and the /crm bot answers questions and works the board from inside Slack."
+        >
+          <MockSlack />
+        </BentoCard>
+        <BentoCard
+          title="It reads the web for you"
+          body="Agents search with Exa, scrape pages with Firecrawl, and file every fact with the source that backs it."
+        >
+          <MockWebResearch />
+        </BentoCard>
+        <BentoCard
+          title="One chat runs the whole CRM"
+          body="The Ask page answers from every table. /task and /note write straight to the timeline, no model key needed."
+        >
+          <MockAsk />
+        </BentoCard>
+        <BentoCard
+          title="It books its own follow-ups"
+          body="Rechecks require a stated reason before they land on the queue."
+        >
+          <MockFollowUps />
+        </BentoCard>
+        <BentoCard
+          title="Watch it work"
+          body="The Activity page streams every query, mutation, and agent run live. Command-K searches every record."
+          className="sm:col-span-2"
+        >
+          <MockActivityLog />
+        </BentoCard>
+        <BentoCard
+          title="Bring your own keys"
+          body={
+            <>
+              Every integration is optional. Set a key and the capability turns on; leave it unset
+              and the app says so instead of faking results.{" "}
+              <Link
+                to="/docs#environment-variables"
+                className="whitespace-nowrap text-accent hover:underline"
+              >
+                Every key explained
+              </Link>
+            </>
+          }
+          className="sm:col-span-2 lg:col-span-3"
+        >
+          <MockByok />
+        </BentoCard>
       </div>
     </section>
   );
 }
 
+// Soft highlight for the config-relevant phrase in a demo note. The accent
+// token remaps under html.light, so the tint stays subtle in both themes.
+function Hl({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded bg-accent/10 px-1 py-px font-medium text-accent">{children}</span>
+  );
+}
+
+// Same tint for environment variable names, in mono so they read as keys.
+function EnvKey({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded bg-accent/10 px-1 py-px font-mono text-[0.8125rem] text-accent">
+      {children}
+    </span>
+  );
+}
+
+// Inline link to the docs section that covers the note.
+function DocsLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link to={to} className="whitespace-nowrap text-accent hover:underline">
+      {label}
+    </Link>
+  );
+}
+
 function DemoNotes() {
+  const notes = [
+    {
+      key: "realtime",
+      body: (
+        <>
+          Everything in the CRM <Hl>works in real time</Hl>: companies, contacts, the deal board,
+          agents, and the dashboard rollups. Nothing to configure.{" "}
+          <DocsLink to="/docs#using-the-app" label="Using the app" />
+        </>
+      ),
+    },
+    {
+      key: "reset",
+      body: (
+        <>
+          Content <Hl>resets every 10 minutes</Hl> with a Convex cron job. Edit anything; it comes
+          back. Your fork can turn the reset off.{" "}
+          <DocsLink to="/docs#fork-and-setup" label="Fork and set it up" />
+        </>
+      ),
+    },
+    {
+      key: "auth",
+      body: (
+        <>
+          Sign-in is disabled. The code ships <Hl>ready for Convex Auth</Hl>; the demo keeps writes
+          open on seeded data instead. <DocsLink to="/docs#auth" label="Turning on sign-in" />
+        </>
+      ),
+    },
+    {
+      key: "email",
+      body: (
+        <>
+          Email is wired through the Resend and AgentMail components but not configured on the
+          demo. Set <EnvKey>RESEND_API_KEY</EnvKey>, or <EnvKey>AGENTMAIL_API_KEY</EnvKey> plus{" "}
+          <EnvKey>AGENTMAIL_INBOX_ID</EnvKey>, on your own deployment and pick a provider in
+          Settings. <DocsLink to="/docs#email" label="Email setup" />
+        </>
+      ),
+    },
+    {
+      key: "slack",
+      body: (
+        <>
+          Slack notifications and the /crm bot are built in but off by default. Set{" "}
+          <EnvKey>SLACK_WEBHOOK_URL</EnvKey> or <EnvKey>SLACK_BOT_TOKEN</EnvKey> and flip the
+          switch in Settings, Slack. The demo never posts.{" "}
+          <DocsLink to="/docs#slack" label="Slack setup" />
+        </>
+      ),
+    },
+    {
+      key: "research",
+      body: (
+        <>
+          Enrichment, web research, and chat degrade honestly: without{" "}
+          <EnvKey>CONTEXT_DEV_API_KEY</EnvKey>, <EnvKey>FIRECRAWL_API_KEY</EnvKey>,{" "}
+          <EnvKey>EXA_API_KEY</EnvKey>, or a model key they say so instead of faking results.{" "}
+          <DocsLink to="/docs#web-research" label="Web research setup" />
+        </>
+      ),
+    },
+    {
+      key: "providers",
+      body: (
+        <>
+          Chat runs on OpenAI, Claude, or OpenRouter. None of those keys ship by default;{" "}
+          <Hl>pick a provider in Settings</Hl> and set its key on your own deployment.{" "}
+          <DocsLink to="/docs#ai-providers" label="AI providers" />
+        </>
+      ),
+    },
+  ];
   return (
     <section className="mx-auto max-w-3xl px-4 pb-14">
       <div className="rounded-lg border border-edge bg-panel p-6">
         <h2 className="text-base font-semibold text-white">What the demo does and does not do</h2>
-        <ul className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-neutral-400">
-          <li>
-            Everything in the CRM works in real time: companies, contacts, the deal board, agents,
-            and the dashboard rollups.
-          </li>
-          <li>
-            Content resets every 10 minutes with a Convex cron job. Edit anything; it comes back.
-          </li>
-          <li>
-            Sign-in is disabled. The code ships ready for Convex Auth; the demo keeps writes open on
-            seeded data instead.
-          </li>
-          <li>
-            Email is wired through the Resend and AgentMail components but not configured on the
-            demo. Set RESEND_API_KEY, or AGENTMAIL_API_KEY plus AGENTMAIL_INBOX_ID, on your own
-            deployment to turn it on and pick a provider in Settings.
-          </li>
-          <li>
-            Slack notifications and the /crm bot are built in but off by default. On your own
-            deployment, set SLACK_WEBHOOK_URL or SLACK_BOT_TOKEN and flip the switch in Settings,
-            Slack. The demo never posts.
-          </li>
-          <li>
-            Enrichment, web research, and chat degrade honestly: without CONTEXT_DEV_API_KEY,
-            FIRECRAWL_API_KEY, EXA_API_KEY, or a model key they say so instead of faking results.
-          </li>
-          <li>
-            Chat runs on OpenAI, Claude, or OpenRouter. None of those keys ship by default; pick a
-            provider in Settings and set its key on your own deployment.
-          </li>
+        <ul className="mt-4 flex flex-col gap-3 text-sm leading-relaxed text-neutral-400">
+          {notes.map((note) => (
+            <li key={note.key} className="flex gap-2.5">
+              <span
+                aria-hidden
+                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-600"
+              />
+              <span>{note.body}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </section>
@@ -377,11 +844,22 @@ export function SiteFooter({ credit = false }: { credit?: boolean }) {
         </div>
         {credit ? (
           <p className="text-xs text-neutral-600">
-            Built with{" "}
+            Made with{" "}
             <a href="https://cursor.com" className="hover:text-neutral-400">
               Cursor
+            </a>
+            ,{" "}
+            <a href="https://claude.com" className="hover:text-neutral-400">
+              Claude Fable
             </a>{" "}
-            and Fable.
+            and{" "}
+            <a
+              href="https://developers.cloudflare.com/dns/"
+              className="hover:text-neutral-400"
+            >
+              DNS Cloudflare
+            </a>
+            .
           </p>
         ) : null}
         <div className="flex flex-wrap justify-center gap-4 text-xs text-neutral-500">
