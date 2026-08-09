@@ -36,6 +36,8 @@
   --color-red-900: #7f1d1d;
   --color-yellow-400: #fbbf24;
   --color-yellow-800: #854d0e;
+  --color-amber-200: #fde68a;
+  --color-amber-500: #f59e0b;
   --color-emerald-400: #4ade80;
   --color-emerald-800: #065f46;
 
@@ -71,6 +73,8 @@ html.light {
   --color-red-900: #fecaca;
   --color-yellow-400: #b45309;
   --color-yellow-800: #fcd34d;
+  --color-amber-200: #92400e;
+  --color-amber-500: #d97706;
   --color-emerald-400: #047857;
   --color-emerald-800: #6ee7b7;
 }

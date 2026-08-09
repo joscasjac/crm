@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.10] (2026-08-09)
+
+Amber warning text readable in light mode. Timestamp: 2026-08-09 23:42 UTC.
+
+### Fixed
+
+- The demo banner, the Settings API key note, and the Docs demo callout all use `text-amber-200/90`, but amber was never declared in the theme token set, so light mode showed pale amber text on a near-white background. `--color-amber-200` and `--color-amber-500` are now declared in `src/index.css` like every other palette color: dark keeps the Tailwind defaults, light remaps the text to a deep amber (#92400e) and the border and tint to amber 600 (#d97706). An audit of every raw palette class in src confirmed amber was the only color missing a light remap
+
 ## [2.13.9] (2026-08-09)
 
 Compare page catches up with Slack and table settings. Timestamp: 2026-08-09 23:26 UTC.
