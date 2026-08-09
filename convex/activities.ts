@@ -6,6 +6,7 @@ import { logEvent } from "./logs";
 import { clip, insertActivity } from "./model/activities";
 import { activityType } from "./schema";
 import { writeMutation } from "./model/functions";
+import { notifySlack } from "./slack";
 
 // Attach author display data so the three timeline queries stay identical.
 async function withAuthor(ctx: QueryCtx, rows: Array<Doc<"activities">>) {
@@ -109,6 +110,16 @@ export const completeTask = writeMutation({
       status: "success",
       message: `Task completed: ${clip(activity.body)}`,
     });
+    await notifySlack(
+      ctx,
+      "tasks",
+      `Task completed: ${clip(activity.body, 200)}`,
+      activity.companyId
+        ? `/app/companies/${activity.companyId}`
+        : activity.contactId
+          ? `/app/contacts/${activity.contactId}`
+          : "/app/activity",
+    );
     return null;
   },
 });

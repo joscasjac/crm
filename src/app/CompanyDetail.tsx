@@ -43,7 +43,7 @@ export function CompanyDetail() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <CompanyLogo name={company.name} logoUrl={company.logoUrl} size={40} />
           <div>
@@ -56,7 +56,7 @@ export function CompanyDetail() {
           </div>
           <EnrichmentBadge status={company.enrichmentStatus} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => setComposeOpen(true)}>Email</Button>
           <Button
             onClick={() =>
@@ -89,7 +89,7 @@ export function CompanyDetail() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Panel className="p-4">
           <p className="text-xs text-neutral-500">Open pipeline</p>
           <p className="mt-1 text-lg font-semibold text-white">
@@ -121,12 +121,12 @@ export function CompanyDetail() {
         </Panel>
       </div>
 
-      <div className="mb-4 flex gap-1 border-b border-edge">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-edge">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm transition-colors ${
+            className={`whitespace-nowrap px-3 py-2 text-sm transition-colors ${
               tab === t
                 ? "border-b-2 border-accent text-white"
                 : "text-neutral-500 hover:text-neutral-300"

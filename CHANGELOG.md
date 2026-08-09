@@ -1,5 +1,95 @@
 # Changelog
 
+## [2.11.4] (2026-08-09)
+
+Demo banner restyle and Team demo note. Timestamp: 2026-08-09 16:45 UTC.
+
+### Changed
+
+- Demo mode banner now uses the same amber callout style as the Slack untested notice: amber border, tinted background, and a bold "Demo mode." lead-in (`src/components/DemoBanner.tsx`)
+
+### Added
+
+- "Demo users" callout at the top of Settings, Team while demo mode is on, explaining the people listed are fake seed data who cannot sign in or receive email; hidden once demo mode is off so forks see their real team (`src/app/Settings.tsx`)
+
+## [2.11.3] (2026-08-09)
+
+File an issue links. Timestamp: 2026-08-09 16:40 UTC.
+
+### Added
+
+- "File an issue" link to the fork's GitHub issues page (Issues are now enabled on the fork). One link sits in the site footer, which the homepage and Compare page share, and one sits below the section list in the docs sidebar (`src/pages/Landing.tsx`, `src/pages/Docs.tsx`)
+
+## [2.11.2] (2026-08-09)
+
+Docs prod commands and Slack untested notice. Timestamp: 2026-08-09 16:30 UTC.
+
+### Added
+
+- Untested callout at the top of the Slack docs section and the README Slack section: the integration follows Slack's current API docs but has not been run against a live workspace (`src/pages/Docs.tsx`, `README.md`)
+- Every docs section that sets an env var now shows the `--prod` variant so production gets the same keys: the three Slack commands carry a second `--prod` line, and the fork setup, email, web research, and AI provider sections gained a `--prod` example with a one-line note that dev and production keep separate variables (`src/pages/Docs.tsx`)
+
+## [2.11.1] (2026-08-09)
+
+Docs sidebar search. Timestamp: 2026-08-09 15:05 UTC.
+
+### Added
+
+- Search box at the top of the docs sidebar. It filters the section list by title and by the rendered body text of each section, so terms like not_in_channel or RESEND_API_KEY surface the right section even when the label never mentions them. Escape clears the query (`src/pages/Docs.tsx`)
+
+## [2.11.0] (2026-08-09)
+
+Slack integration, off by default. Timestamp: 2026-08-09 12:10 UTC.
+
+### Added
+
+- Outbound Slack notifications with a master switch and per-event toggles: new companies and contacts, new deals and stage changes, task completions, and agent run summaries. Messages carry an Open in CRM deep link and deliveries retry with backoff through the action retrier component (`convex/slack.ts`, `convex/companies.ts`, `convex/contacts.ts`, `convex/deals.ts`, `convex/activities.ts`, `convex/agentTasks.ts`)
+- Two connection modes: `SLACK_WEBHOOK_URL` for one fixed channel, or `SLACK_BOT_TOKEN` for the channel picker and the bot. Bot token wins when both are set; with neither, sends log as no-ops on the Activity page (`convex/slack.ts`, `convex/capabilities.ts`)
+- Settings, Slack: master switch, env status badges for webhook, bot token, and signing secret, per-event toggles, a channel picker with search backed by Slack `conversations.list`, a send test button, the /crm bot switch, and an optional allowed email domain (`src/app/Settings.tsx`)
+- The /crm slash command bot behind its own off-by-default toggle: `/crm find`, `/crm deal <name> <stage>`, `/crm note`, `/crm task`, `/crm activity`, `/crm help`. Three signed HTTP routes under `/webhooks/slack/` verify Slack's v0 signing scheme, ack inside the three second budget, and reply through response_url. Only workspace members can act, matched by Slack profile email against the Team list or an allowed domain, with writes attributed as Name (Slack) (`convex/slackBot.ts`, `convex/http.ts`)
+- `slackIdentities` table caching verified Slack user to member mappings, re-verified after 30 days, plus Slack settings fields on the workspace row (`convex/schema.ts`)
+- Shared `changeDealStage` model helper so stage moves from the UI and the bot patch, aggregate, log, and notify identically (`convex/model/deals.ts`, `convex/deals.ts`)
+- Docs section "Slack: notifications and the bot" with both setup paths, scope list, slash command wiring, troubleshooting, and links to Slack's webhook, scopes, and request verification docs; four new rows in the env table (`src/pages/Docs.tsx`)
+- README section on the Slack integration, four env table rows, and feature list lines; landing page adds Slack to the built with row and a demo note (`README.md`, `src/pages/Landing.tsx`)
+
+### Notes
+
+- Everything is off by default and demo mode never posts, so forks and the copy setup prompt work with zero Slack setup
+
+## [2.10.0] (2026-08-09)
+
+Mobile pass across the app and marketing pages. Timestamp: 2026-08-09 11:50 UTC.
+
+### Added
+
+- Mobile navigation for the app shell: below the md breakpoint the desktop sidebar hides and a top bar appears with the logo, a search button, and a hamburger menu that opens a right side drawer with all nav links, Settings, Docs, GitHub, Fork, and the theme toggle; Escape and the backdrop close it (`src/app/AppLayout.tsx`)
+
+### Changed
+
+- Companies, Contacts, Deals list view, and Activity tables scroll horizontally inside their panels on small screens instead of stretching the page (`src/app/Companies.tsx`, `src/app/Contacts.tsx`, `src/app/Deals.tsx`, `src/app/Activity.tsx`)
+- Search inputs, filters, and new record form fields go full width on phones (`src/app/Companies.tsx`, `src/app/Contacts.tsx`, `src/app/Deals.tsx`, `src/app/Settings.tsx`)
+- Ask stacks the thread sidebar above the chat on phones with a capped thread list, and the archive and delete row actions show without hover so they work on touch (`src/app/Ask.tsx`)
+- Compose email becomes a fixed bottom sheet on phones; drag and resize stay desktop only (`src/components/ComposeEmail.tsx`)
+- Command-K and the shortcuts modal sit higher with side padding on small screens (`src/components/CommandK.tsx`, `src/components/ShortcutsModal.tsx`)
+- Company and contact detail pages wrap their header actions, stack the stat cards, and scroll the tab row (`src/app/CompanyDetail.tsx`, `src/app/ContactDetail.tsx`)
+- Page headers wrap so action buttons drop below the title on narrow screens (`src/components/ui.tsx`)
+- Landing hides the Compare and Docs header links on phones and wraps the hero buttons and footer links; the Compare table scrolls horizontally (`src/pages/Landing.tsx`, `src/pages/Compare.tsx`)
+- Main content padding tightens on phones (`src/app/AppLayout.tsx`)
+
+## [2.9.0] (2026-08-09)
+
+Fork safety for the demo reset cron. Timestamp: 2026-08-09 11:35 UTC.
+
+### Added
+
+- `demo:disableDemoMode` internal mutation: one command (`npx convex run demo:disableDemoMode`, add `--prod` for production) flips the workspace out of demo mode so the reset cron stops wiping data and writes require a signed-in user (`convex/demo.ts`)
+- "Turning off the demo reset" section in the README with a copy-paste coding agent prompt that disables demo mode and removes the cron; the `/docs` page carries the same command in the auth section and the same prompt in the coding agents section (`README.md`, `src/pages/Docs.tsx`)
+
+### Changed
+
+- `demo:reset` now checks the workspace before wiping: when demo mode is off it logs a skip to the Activity page and touches nothing, so a fork that never edits `convex/crons.ts` still cannot lose data (`convex/demo.ts`)
+- The `demo reset` line in `convex/crons.ts` carries a FORKS comment pointing at the disable command and the README section
+
 ## [2.8.0] (2026-08-09)
 
 Context.dev as a second provider for web search and web scraping. Timestamp: 2026-08-09 10:30 UTC.

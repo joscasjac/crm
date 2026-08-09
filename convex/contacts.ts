@@ -4,6 +4,7 @@ import { query } from "./_generated/server";
 import { logEvent } from "./logs";
 import { deleteContactCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
+import { notifySlack } from "./slack";
 
 export const list = query({
   args: {
@@ -90,6 +91,15 @@ export const create = writeMutation({
       status: "success",
       message: `Created ${args.name}`,
     });
+    const company = args.companyId
+      ? await ctx.db.get("companies", args.companyId)
+      : null;
+    await notifySlack(
+      ctx,
+      "records",
+      `New contact: ${args.name}${args.email ? ` (${args.email})` : ""}${company ? ` at ${company.name}` : ""}`,
+      `/app/contacts/${contactId}`,
+    );
     return contactId;
   },
 });

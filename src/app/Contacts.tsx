@@ -62,7 +62,7 @@ export function Contacts() {
         subtitle="People arrive from threads and enrichment; every field carries its evidence."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-72">
+        <div className="w-full sm:w-72">
           <Input
             placeholder="Search contacts by name or email"
             value={search}
@@ -80,11 +80,12 @@ export function Contacts() {
             { value: "WITH", label: "With a company" },
             { value: "WITHOUT", label: "No company" },
           ]}
-          className="w-44"
+          className="w-full sm:w-44"
         />
       </div>
       <Panel>
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-left text-sm">
           <thead>
             <tr className="border-b border-edge text-xs text-neutral-500">
               <SortHeader
@@ -153,6 +154,7 @@ export function Contacts() {
             <InlineAddRow />
           </tbody>
         </table>
+        </div>
         {status === "CanLoadMore" ? (
           <div className="border-t border-edge p-3 text-center">
             <Button onClick={() => loadMore(25)}>Load more</Button>

@@ -23,10 +23,11 @@ export function DemoBanner() {
     .padStart(2, "0");
 
   return (
-    <div className="flex items-center justify-center gap-2 border-b border-edge bg-panel px-4 py-1.5 text-xs text-neutral-400">
+    <div className="flex items-center justify-center gap-2 border-b border-amber-500/30 bg-amber-500/5 px-4 py-1.5 text-xs leading-relaxed text-amber-200/90">
       <span>
-        Demo mode. Content resets every 10 minutes. Next reset in {minutes}:
-        {seconds}. Auth and email are not configured on this demo.
+        <span className="font-medium">Demo mode.</span> Content resets every
+        10 minutes. Next reset in {minutes}:{seconds}. Auth and email are not
+        configured on this demo.
       </span>
     </div>
   );

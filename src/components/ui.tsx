@@ -28,7 +28,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 className="text-xl font-semibold text-white">{title}</h1>
         {subtitle ? (

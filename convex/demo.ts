@@ -30,10 +30,22 @@ const TABLES = [
 
 // Wipe everything and reseed. Runs on a cron every ten minutes in demo mode,
 // and can be run by hand with: npx convex run demo:reset
+// Safety for forks: a no-op when demo mode is off, so the cron cannot wipe
+// real data. Turn demo mode off with: npx convex run demo:disableDemoMode
 export const reset = internalMutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
+    const workspace = await ctx.db.query("workspace").first();
+    if (workspace && !workspace.demoMode) {
+      await logEvent(ctx, {
+        kind: "C",
+        fn: "demo:reset",
+        status: "info",
+        message: "Demo mode is off, reset skipped. Remove the demo reset cron from convex/crons.ts.",
+      });
+      return null;
+    }
     for (const table of TABLES) {
       const rows = await ctx.db.query(table).collect();
       for (const row of rows) {
@@ -48,6 +60,29 @@ export const reset = internalMutation({
       fn: "demo:reset",
       status: "success",
       message: "Demo content wiped and reseeded",
+    });
+    return null;
+  },
+});
+
+// For forks: turn demo mode off so the reset cron stops wiping data and
+// writes require a signed-in user. Internal on purpose so visitors to the
+// public demo cannot call it. Run with: npx convex run demo:disableDemoMode
+export const disableDemoMode = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const workspace = await ctx.db.query("workspace").first();
+    if (!workspace || !workspace.demoMode) {
+      return null;
+    }
+    await ctx.db.patch("workspace", workspace._id, { demoMode: false });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "demo:disableDemoMode",
+      status: "success",
+      message:
+        "Demo mode is off. The reset cron is now a no-op; remove it from convex/crons.ts when convenient.",
     });
     return null;
   },

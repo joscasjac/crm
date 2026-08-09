@@ -34,13 +34,15 @@ export function SiteHeader() {
         <Link to="/" className="text-sm font-semibold text-white">
           CRM on Convex
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/compare"
-            className="text-sm text-neutral-400 transition-colors hover:text-white">
+            className="hidden text-sm text-neutral-400 transition-colors hover:text-white sm:block">
             Compare
           </Link>
-          <Link to="/docs" className="text-sm text-neutral-400 transition-colors hover:text-white">
+          <Link
+            to="/docs"
+            className="hidden text-sm text-neutral-400 transition-colors hover:text-white sm:block">
             Docs
           </Link>
           <a
@@ -115,7 +117,7 @@ function Hero() {
           Durable research agents read your pipeline, enrich records, and book their own follow-ups.
           One Convex deployment runs all of it.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/app"
             className="rounded-md bg-primary px-5 py-2.5 text-sm text-primary-ink transition-colors hover:bg-primary-hover">
@@ -179,6 +181,12 @@ function BuiltWith() {
             className="text-sm font-semibold text-white opacity-80 transition-opacity hover:opacity-100"
             aria-label="Exa">
             Exa
+          </a>
+          <a
+            href="https://slack.com"
+            className="text-sm font-semibold text-white opacity-80 transition-opacity hover:opacity-100"
+            aria-label="Slack">
+            Slack
           </a>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
@@ -320,6 +328,11 @@ function DemoNotes() {
             deployment to turn it on and pick a provider in Settings.
           </li>
           <li>
+            Slack notifications and the /crm bot are built in but off by default. On your own
+            deployment, set SLACK_WEBHOOK_URL or SLACK_BOT_TOKEN and flip the switch in Settings,
+            Slack. The demo never posts.
+          </li>
+          <li>
             Enrichment, web research, and chat degrade honestly: without CONTEXT_DEV_API_KEY,
             FIRECRAWL_API_KEY, EXA_API_KEY, or a model key they say so instead of faking results.
           </li>
@@ -340,7 +353,7 @@ function ForkIt() {
       <p className="mx-auto mt-3 max-w-md text-sm text-neutral-400">
         MIT licensed. One npm install, one Convex deployment, no other services to stand up.
       </p>
-      <div className="mt-8 flex items-center justify-center gap-3">
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <CopyPromptButton />
         <a
           href="https://github.com/waynesutton/trycrm-convex"
@@ -360,12 +373,17 @@ export function SiteFooter() {
           <img src="/convex-logo-white.png" alt="Convex" className="themed-logo h-4" />
           <span className="text-sm text-neutral-400">The open source agentic CRM, on Convex.</span>
         </div>
-        <div className="flex gap-4 text-xs text-neutral-500">
+        <div className="flex flex-wrap justify-center gap-4 text-xs text-neutral-500">
           <Link to="/docs" className="hover:text-neutral-300">
             Docs
           </Link>
           <a href="https://github.com/waynesutton/trycrm-convex" className="hover:text-neutral-300">
             GitHub
+          </a>
+          <a
+            href="https://github.com/waynesutton/trycrm-convex/issues"
+            className="hover:text-neutral-300">
+            File an issue
           </a>
           <a href="https://github.com/trycompai/crm" className="hover:text-neutral-300">
             Original by Comp AI

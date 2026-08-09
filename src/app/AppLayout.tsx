@@ -28,6 +28,7 @@ export function AppLayout() {
   const setOrder = useMutation(api.prefs.setSidebarOrder);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   // Attio-style rail toggle; the preference sticks per browser.
   const [collapsed, setCollapsed] = useState(
@@ -67,6 +68,16 @@ export function AppLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Escape closes the mobile drawer.
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
+
   // Apply saved order, append anything new, drop hidden items.
   const savedOrder = prefs?.order;
   const hidden = new Set(prefs?.hidden ?? []);
@@ -98,19 +109,126 @@ export function AppLayout() {
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
       />
+      {/* Mobile top bar: logo, search, and the drawer trigger. */}
+      <div className="flex items-center justify-between border-b border-edge bg-ink px-4 py-3 md:hidden">
+        <Link
+          to="/"
+          className="flex items-baseline gap-1.5 text-sm font-semibold text-white"
+        >
+          CRM on Convex
+          <span className="rounded border border-edge px-1 py-px text-[9px] font-medium uppercase tracking-wide text-neutral-500">
+            demo
+          </span>
+        </Link>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSearchOpen(true)}
+            title="Search"
+            className="rounded-md p-2 text-neutral-400 transition-colors hover:text-white"
+          >
+            <SearchIcon />
+          </button>
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            title="Menu"
+            className="rounded-md p-2 text-neutral-400 transition-colors hover:text-white"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+      </div>
+      {/* Mobile drawer: plain links, no drag to reorder. */}
+      {mobileNavOpen ? (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div className="absolute inset-y-0 right-0 flex w-64 max-w-[85vw] flex-col border-l border-edge bg-ink">
+            <div className="flex items-center justify-between border-b border-edge px-4 py-4">
+              <span className="text-sm font-semibold text-white">Menu</span>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                title="Close menu"
+                className="rounded-md p-1 text-neutral-400 transition-colors hover:text-white"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <nav className="flex flex-col gap-0.5 overflow-y-auto p-2">
+              {visible.map((item) => (
+                <NavLink
+                  key={item.id}
+                  to={item.to}
+                  end={"end" in item ? item.end : undefined}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={({ isActive }) =>
+                    `rounded-md px-3 py-2 text-sm transition-colors ${
+                      isActive
+                        ? "bg-raised text-white"
+                        : "text-neutral-400 hover:bg-panel hover:text-white"
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+              <NavLink
+                to="/app/settings"
+                onClick={() => setMobileNavOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? "bg-raised text-white"
+                      : "text-neutral-400 hover:bg-panel hover:text-white"
+                  }`
+                }
+              >
+                Settings
+              </NavLink>
+              <Link
+                to="/docs"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-md px-3 py-2 text-sm text-neutral-400 transition-colors hover:bg-panel hover:text-white"
+              >
+                Docs
+              </Link>
+            </nav>
+            <div className="mt-auto border-t border-edge p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://github.com/waynesutton/trycrm-convex"
+                    className="text-[11px] text-neutral-500 transition-colors hover:text-neutral-300"
+                  >
+                    GitHub
+                  </a>
+                  <a
+                    href="https://github.com/waynesutton/trycrm-convex/fork"
+                    className="text-[11px] text-neutral-500 transition-colors hover:text-neutral-300"
+                  >
+                    Fork
+                  </a>
+                </div>
+                <ThemeToggle compact />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="relative flex min-h-0 flex-1">
         {collapsed ? (
           <button
             onClick={toggleSidebar}
             title="Show sidebar"
-            className="absolute left-3 top-3 z-20 rounded-md border border-edge bg-panel p-1.5 text-neutral-400 transition-colors hover:text-white"
+            className="absolute left-3 top-3 z-20 hidden rounded-md border border-edge bg-panel p-1.5 text-neutral-400 transition-colors hover:text-white md:block"
           >
             <SidebarIcon />
           </button>
         ) : null}
         <aside
-          className={`w-52 shrink-0 flex-col border-r border-edge bg-ink ${
-            collapsed ? "hidden" : "flex"
+          className={`hidden w-52 shrink-0 flex-col border-r border-edge bg-ink ${
+            collapsed ? "" : "md:flex"
           }`}
         >
           <div className="flex items-center justify-between border-b border-edge px-4 py-4">
@@ -220,7 +338,7 @@ export function AppLayout() {
             </div>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 overflow-y-auto p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </main>
       </div>
@@ -259,6 +377,24 @@ function SearchIcon() {
     >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+// Phosphor's List, inlined from phosphoricons.com (MIT).
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+      <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z" />
+    </svg>
+  );
+}
+
+// Phosphor's X, inlined from phosphoricons.com (MIT).
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
+      <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
     </svg>
   );
 }

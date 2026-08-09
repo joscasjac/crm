@@ -75,9 +75,19 @@ export function ComposeEmail({
   const [sent, setSent] = useState(false);
 
   // Window geometry. Drag moves it, the corner handle resizes it, and
-  // both clamp so the title bar can never leave the viewport.
+  // both clamp so the title bar can never leave the viewport. On phones
+  // the window becomes a fixed bottom sheet instead.
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ w: 520, h: 480 });
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 639px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
   const dragState = useRef<{
     mode: "move" | "resize";
     startX: number;
@@ -222,12 +232,20 @@ export function ComposeEmail({
 
   return (
     <div
-      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-edge-strong bg-panel shadow-2xl"
-      style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
+      className={`fixed z-50 flex flex-col overflow-hidden border border-edge-strong bg-panel shadow-2xl ${
+        isMobile ? "inset-x-0 bottom-0 rounded-t-lg" : "rounded-lg"
+      }`}
+      style={
+        isMobile
+          ? { height: "min(480px, 85dvh)" }
+          : { left: pos.x, top: pos.y, width: size.w, height: size.h }
+      }
     >
       <div
-        onPointerDown={startDrag("move")}
-        className="flex cursor-move items-center justify-between border-b border-edge bg-raised px-3 py-2 select-none"
+        onPointerDown={isMobile ? undefined : startDrag("move")}
+        className={`flex items-center justify-between border-b border-edge bg-raised px-3 py-2 select-none ${
+          isMobile ? "" : "cursor-move"
+        }`}
       >
         <span className="text-sm font-medium text-white">New email</span>
         <button
@@ -400,7 +418,7 @@ export function ComposeEmail({
       <div
         onPointerDown={startDrag("resize")}
         title="Resize"
-        className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
+        className="absolute bottom-0 right-0 hidden h-4 w-4 cursor-nwse-resize sm:block"
       >
         <svg
           width="10"

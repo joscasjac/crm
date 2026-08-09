@@ -78,8 +78,8 @@ export function Ask() {
   };
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl gap-4">
-      <aside className="flex w-56 shrink-0 flex-col rounded-lg border border-edge bg-panel">
+    <div className="mx-auto flex h-full max-w-6xl flex-col gap-4 md:flex-row">
+      <aside className="flex w-full shrink-0 flex-col rounded-lg border border-edge bg-panel md:w-56">
         <div className="border-b border-edge p-2">
           <button
             onClick={() => setActiveThreadId(null)}
@@ -88,7 +88,7 @@ export function Ask() {
             New chat
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className="max-h-40 min-h-0 flex-1 overflow-y-auto p-2 md:max-h-none">
           <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-neutral-600">
             Chats
           </p>
@@ -193,14 +193,14 @@ function ThreadRow({
       <button
         onClick={onArchive}
         title={archivedRow ? "Unarchive" : "Archive"}
-        className="hidden shrink-0 text-[10px] text-neutral-600 hover:text-neutral-300 group-hover:block"
+        className="block shrink-0 text-[10px] text-neutral-600 hover:text-neutral-300 md:hidden md:group-hover:block"
       >
         {archivedRow ? "restore" : "archive"}
       </button>
       <button
         onClick={onDelete}
         title="Delete"
-        className="hidden shrink-0 text-[10px] text-neutral-600 hover:text-red-400 group-hover:block"
+        className="block shrink-0 text-[10px] text-neutral-600 hover:text-red-400 md:hidden md:group-hover:block"
       >
         delete
       </button>
@@ -263,7 +263,7 @@ function Conversation({
   })();
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {threadId ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4">
           {messages.results?.map((message) => (

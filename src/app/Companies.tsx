@@ -82,7 +82,7 @@ export function Companies() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-72">
+        <div className="w-full sm:w-72">
           <Input
             placeholder="Search companies by name or domain"
             value={search}
@@ -99,14 +99,15 @@ export function Companies() {
             value: f,
             label: f === "ALL" ? "All enrichment states" : f.toLowerCase(),
           }))}
-          className="w-52"
+          className="w-full sm:w-52"
         />
       </div>
 
       {showNew ? <NewCompanyForm onDone={() => setShowNew(false)} /> : null}
 
       <Panel>
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
             <tr className="border-b border-edge text-xs text-neutral-500">
               <SortHeader
@@ -195,7 +196,8 @@ export function Companies() {
             ))}
             <InlineAddRow />
           </tbody>
-        </table>
+          </table>
+        </div>
         {status === "CanLoadMore" ? (
           <div className="border-t border-edge p-3 text-center">
             <Button onClick={() => loadMore(25)}>Load more</Button>
@@ -287,11 +289,11 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
   return (
     <Panel className="mb-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <label className="mb-1 block text-xs text-neutral-500">Name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <label className="mb-1 block text-xs text-neutral-500">
             Domain (optional, triggers enrichment)
           </label>

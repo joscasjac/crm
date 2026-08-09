@@ -73,6 +73,22 @@ export default defineSchema({
     // the Settings page. Both reset with the demo like everything else.
     sidebarOrder: v.optional(v.array(v.string())),
     sidebarHidden: v.optional(v.array(v.string())),
+    // Slack integration. Everything optional and off by default; the env
+    // vars (SLACK_WEBHOOK_URL, SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET) live on
+    // the deployment, these rows hold the workspace preferences.
+    slackEnabled: v.optional(v.boolean()),
+    slackNotifyRecords: v.optional(v.boolean()),
+    slackNotifyDeals: v.optional(v.boolean()),
+    slackNotifyTasks: v.optional(v.boolean()),
+    slackNotifyAgent: v.optional(v.boolean()),
+    // Channel ID (bot token mode) plus the display name for the settings UI.
+    // Webhook mode ignores both: the channel is baked into the URL.
+    slackChannelId: v.optional(v.string()),
+    slackChannelName: v.optional(v.string()),
+    // The /crm agent bot toggle, and an optional email domain that widens
+    // the Slack user match beyond the exact team member emails.
+    slackBotEnabled: v.optional(v.boolean()),
+    slackAllowedEmailDomain: v.optional(v.string()),
   }),
 
   // Workspace members. Demo seeds these; with Convex Auth enabled this table
@@ -328,6 +344,16 @@ export default defineSchema({
     ),
     message: v.string(),
   }),
+
+  // Verified Slack users. The /crm bot maps a Slack user id to a workspace
+  // member by email (users.info via the bot token) and caches the match
+  // here. Rows older than 30 days re-verify so departed teammates age out.
+  slackIdentities: defineTable({
+    slackUserId: v.string(),
+    email: v.string(),
+    name: v.string(),
+    verifiedAt: v.number(),
+  }).index("by_slackUserId", ["slackUserId"]),
 
   // Per-record agent chat threads, mapped to Agent component threads.
   chatThreads: defineTable({

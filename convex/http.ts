@@ -3,6 +3,11 @@ import { registerStaticRoutes } from "@convex-dev/static-hosting";
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { components } from "./_generated/api";
+import {
+  commandsRoute,
+  eventsRoute,
+  interactivityRoute,
+} from "./slackBot";
 
 const http = httpRouter();
 
@@ -22,6 +27,25 @@ http.route({
       req,
     ),
   ),
+});
+
+// Slack /crm bot routes, all behind the slackBotEnabled toggle (503 while
+// off) and Slack's v0 request signing. Handlers ack inside Slack's three
+// second budget and schedule the real work; see convex/slackBot.ts.
+http.route({
+  path: "/webhooks/slack/commands",
+  method: "POST",
+  handler: commandsRoute,
+});
+http.route({
+  path: "/webhooks/slack/interactivity",
+  method: "POST",
+  handler: interactivityRoute,
+});
+http.route({
+  path: "/webhooks/slack/events",
+  method: "POST",
+  handler: eventsRoute,
 });
 
 // The built Vite app is served straight from Convex storage. Exact app routes

@@ -7,7 +7,9 @@ import {
 } from "./aggregates";
 import { logEvent } from "./logs";
 import { deleteDealCascade } from "./model/cascade";
+import { changeDealStage } from "./model/deals";
 import { writeMutation } from "./model/functions";
+import { notifySlack } from "./slack";
 
 export const STAGES = [
   "QUALIFIED",
@@ -89,6 +91,13 @@ export const create = writeMutation({
       status: "success",
       message: `Created ${args.name} at ${(args.amountMinor / 100).toLocaleString()} ${args.currency}`,
     });
+    const company = await ctx.db.get("companies", args.companyId);
+    await notifySlack(
+      ctx,
+      "records",
+      `New deal: ${args.name}${company ? ` for ${company.name}` : ""} at ${(args.amountMinor / 100).toLocaleString()} ${args.currency} in ${args.stage}`,
+      "/app/deals",
+    );
     return dealId;
   },
 });
@@ -124,38 +133,13 @@ export const update = writeMutation({
 });
 
 // Stage changes write a STAGE_CHANGE activity in the same transaction, so the
-// timeline and the pipeline totals move together.
+// timeline and the pipeline totals move together. The shared helper in
+// model/deals.ts carries the logic; the Slack /crm bot calls the same code.
 export const changeStage = writeMutation({
   args: { dealId: v.id("deals"), stage: dealStage },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const oldDoc = await ctx.db.get("deals", args.dealId);
-    if (!oldDoc) throw new Error("Deal not found");
-    if (oldDoc.stage === args.stage) return null;
-
-    const closed =
-      args.stage === "CLOSED_WON" || args.stage === "CLOSED_LOST";
-    await ctx.db.patch("deals", args.dealId, {
-      stage: args.stage,
-      closedAt: closed ? Date.now() : undefined,
-    });
-    const newDoc = await ctx.db.get("deals", args.dealId);
-    if (newDoc) await trackDealReplace(ctx, oldDoc, newDoc);
-
-    await ctx.db.insert("activities", {
-      type: "STAGE_CHANGE",
-      body: `Moved from ${oldDoc.stage} to ${args.stage}`,
-      companyId: oldDoc.companyId,
-      dealId: args.dealId,
-      meta: { fromStage: oldDoc.stage, toStage: args.stage },
-    });
-    await ctx.db.patch("companies", oldDoc.companyId, { lastActivityAt: Date.now() });
-    await logEvent(ctx, {
-      kind: "M",
-      fn: "deals:changeStage",
-      status: "success",
-      message: `${oldDoc.name}: ${oldDoc.stage} → ${args.stage}`,
-    });
+    await changeDealStage(ctx, args.dealId, args.stage);
     return null;
   },
 });

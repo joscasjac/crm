@@ -11,6 +11,7 @@
   <a href="#configuration"><strong>Configuration</strong></a> ·
   <a href="#email-two-providers"><strong>Email</strong></a> ·
   <a href="#deploying-to-convex-cloud"><strong>Deploying</strong></a> ·
+  <a href="#turning-off-the-demo-reset"><strong>Forking</strong></a> ·
   <a href="#how-it-compares-to-upstream"><strong>Compare</strong></a>
 </p>
 
@@ -93,6 +94,10 @@ Every outside key is optional in practice. The app degrades honestly: features t
 | `OPENROUTER_API_KEY` | Chat and agent reasoning when OpenRouter is the selected provider | Same |
 | `RESEND_API_KEY` | Outbound email through the Resend component | Email sends are logged as no-ops |
 | `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID` | Outbound email plus a persistent agent inbox through AgentMail | Same, logged as no-ops |
+| `SLACK_WEBHOOK_URL` | Slack notifications in simple mode: posts to one fixed channel through an incoming webhook | Slack sends are logged as no-ops |
+| `SLACK_BOT_TOKEN` | Slack notifications in full mode: the channel picker in Settings and the `/crm` bot | Same, logged as no-ops |
+| `SLACK_SIGNING_SECRET` | Verifies inbound Slack slash commands for the `/crm` bot | Bot routes answer 503; notifications unaffected |
+| `APP_URL` | Overrides the base URL in Slack deep links, for custom domains | Links use the `.convex.site` URL |
 | `FIRECRAWL_WEBHOOK_SECRET` | Verifies Firecrawl crawl webhooks | Optional; only needed for webhook-mode crawls |
 | `AGENTMAIL_WEBHOOK_SECRET` | Verifies inbound AgentMail webhooks | Optional; unverified deliveries are rejected |
 
@@ -104,7 +109,7 @@ npx convex env set OPENAI_API_KEY sk-...
 
 None of the three AI keys ship by default. A fresh fork has no model keys at all; the Ask page and record chat answer with the exact key they need instead of erroring. Pick which provider the chat uses in Settings.
 
-Demo mode is a flag on the workspace row, set by the seed. While it is on, writes are open, sign-in is disabled, and the reset cron wipes and reseeds all tables every 10 minutes. The banner in the app counts down to the next reset.
+Demo mode is a flag on the workspace row, set by the seed. While it is on, writes are open, sign-in is disabled, and the reset cron wipes and reseeds all tables every 10 minutes. The banner in the app counts down to the next reset. Forking this for real use? Turn it off first: see [Turning off the demo reset](#turning-off-the-demo-reset).
 
 ## Email: two providers
 
@@ -114,6 +119,19 @@ Notifications route through one of two components, and Settings has a toggle to 
 - **AgentMail** sends too, and also gives agents a persistent inbox: threads, labels, and delivery status sync into Convex tables reactively. Two values: `AGENTMAIL_API_KEY` and `AGENTMAIL_INBOX_ID`. For inbound mail, register `https://YOUR-DEPLOYMENT.convex.site/agentmail/webhook` in the AgentMail dashboard and set `AGENTMAIL_WEBHOOK_SECRET`.
 
 Both can hold keys at the same time; the toggle decides which one sends. With neither configured, sends are logged instead of failing, which is how the public demo runs.
+
+## Slack: notifications and the /crm bot
+
+> **Untested.** Built against Slack's current API docs but not yet run against a live Slack workspace. The Activity page logs every send, skip, and failure; start there if something misbehaves, and open an issue if you hit a bug.
+
+Off by default. Turn it on in Settings, Slack, then connect one of two modes. Dev and production keep separate env vars, so run each `npx convex env set` command twice if you deployed: once for dev, once with `--prod`.
+
+- **Webhook mode** posts CRM events to one fixed channel. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps), enable [Incoming Webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/), pick a channel, and set `SLACK_WEBHOOK_URL`. Two minutes, no scopes.
+- **Bot mode** lets you search and pick the channel from Settings and enables the `/crm` slash command. Add the `chat:write`, `channels:read`, `users:read`, and `users:read.email` [bot scopes](https://docs.slack.dev/reference/scopes) (plus `groups:read` for private channels), install the app, and set `SLACK_BOT_TOKEN`. Invite the bot to the channel with `/invite @your-bot-name`.
+
+What posts, each behind its own toggle: new companies and contacts, new deals and stage changes, task completions, and agent run summaries. Every message includes an Open in CRM link. Deliveries retry with backoff through the [action retrier component](https://www.convex.dev/components/retrier); demo mode never posts, and every send or skip shows on the Activity page.
+
+The `/crm` bot needs two more things: `SLACK_SIGNING_SECRET` (from your Slack app's Basic Information page) and a [slash command](https://docs.slack.dev/interactivity/implementing-slash-commands/) pointed at `https://YOUR-DEPLOYMENT.convex.site/webhooks/slack/commands`. Then flip the bot switch in Settings, Slack. Commands: `/crm find`, `/crm deal <name> <stage>`, `/crm note`, `/crm task`, `/crm activity`, `/crm help`. Every request is verified with Slack's [signed secrets scheme](https://docs.slack.dev/authentication/verifying-requests-from-slack/), and only workspace members (matched by Slack profile email against the Team list, or an allowed domain) can act. The full walkthrough lives on the `/docs` page of your deployment.
 
 ## Linting and helpers
 
@@ -151,14 +169,34 @@ To seed production data once:
 npx convex run demo:seedPublic --prod
 ```
 
-Note on the reset cron: `convex/crons.ts` resets all content every 10 minutes because this repo powers a public demo. Remove the `demo reset` cron before using this as a real CRM.
+## Turning off the demo reset
+
+`convex/crons.ts` registers a `demo reset` cron that wipes and reseeds every table every 10 minutes, because this repo powers a public demo. If you fork this to use as a real CRM, turn it off before you enter real data.
+
+One command flips the workspace out of demo mode:
+
+```bash
+npx convex run demo:disableDemoMode         # dev deployment
+npx convex run demo:disableDemoMode --prod  # production, if you deployed
+```
+
+Once demo mode is off, two things change. The reset handler becomes a no-op, so even if the cron still fires it wipes nothing and logs a skip to the Activity page. And writes start requiring a signed-in user, so wire up auth next (the `/docs` page on your deployment has a section on it).
+
+The cron itself still fires every 10 minutes until you remove it, so delete the `demo reset` line from `convex/crons.ts` too. Keep the `agent tick` line; that one drives the agent task queue.
+
+Prefer to hand the whole cleanup to a coding agent? Paste this into Cursor, Codex, Claude Code, or whatever you use:
+
+```text
+I forked waynesutton/trycrm-convex and I am using it as a real CRM, not a public demo. Make sure my data is never wiped: run npx convex run demo:disableDemoMode on my dev deployment, and if I have a production deployment run it again with --prod. Then delete the demo reset cron line from convex/crons.ts and push. Leave the agent tick cron in place. Finish by confirming the workspace row has demoMode set to false.
+```
 
 ## What works in the demo
 
 - Companies, contacts, deals board, dashboard rollups, custom fields, timelines, all real time
 - Notes and tasks on every company and contact: due dates, email reminders through the selected provider, complete buttons, all mirrored to the Activity page
 - Compose email from any company or contact: a draggable, resizable window with To, Cc, Bcc, markdown preview, and attachments; the timeline records every send, and delivery waits for a Resend or AgentMail key
-- Settings split into pages with a sub-sidebar: Team, Integrations, Email (provider, from identity, signature), AI provider, Sidebar, Custom fields
+- Settings split into pages with a sub-sidebar: Team, Integrations, Slack, Email (provider, from identity, signature), AI provider, Sidebar, Custom fields
+- Slack integration, off by default: event notifications with per-event toggles, a channel picker with search, a test button, and a `/crm` slash command bot
 - Table sorting, filtering, and inline add rows on Companies and Contacts
 - Deals as a drag and drop board plus a sortable list view
 - Ask: a Claude-style workspace chat with streamed replies, slash commands (including `/task` and `/note`, which need no AI key), a thread sub-sidebar, archive, and delete
@@ -172,7 +210,7 @@ Note on the reset cron: `convex/crons.ts` resets all content every 10 minutes be
 - Dark and light themes with a toggle in the header and the sidebar footer
 - Demo reset every 10 minutes via cron (the Activity log resets with it)
 
-What is intentionally off in the demo: sign-in (the code is structured for Convex Auth; the demo keeps writes open on seeded data) and outbound email (Resend and AgentMail are installed but no keys are set).
+What is intentionally off in the demo: sign-in (the code is structured for Convex Auth; the demo keeps writes open on seeded data), outbound email (Resend and AgentMail are installed but no keys are set), and Slack (built in, but the demo never posts).
 
 ## How it compares to upstream
 

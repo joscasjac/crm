@@ -137,8 +137,8 @@ export function Compare() {
           infrastructure with one Convex deployment.
         </p>
 
-        <div className="mt-8 overflow-hidden rounded-lg border border-edge">
-          <table className="w-full text-left text-sm">
+        <div className="mt-8 overflow-x-auto rounded-lg border border-edge">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="border-b border-edge bg-panel text-xs text-neutral-500">
                 <th className="px-4 py-3 font-medium">Area</th>

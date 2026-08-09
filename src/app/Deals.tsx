@@ -103,7 +103,8 @@ export function Deals() {
 
       {view === "list" ? (
         <Panel>
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-left text-sm">
             <thead>
               <tr className="border-b border-edge text-xs text-neutral-500">
                 <SortHeader
@@ -192,6 +193,7 @@ export function Deals() {
               ))}
             </tbody>
           </table>
+          </div>
         </Panel>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-4">
@@ -347,13 +349,13 @@ function NewDealForm({ onDone }: { onDone: () => void }) {
   return (
     <Panel className="mb-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <label className="mb-1 block text-xs text-neutral-500">
             Deal name
           </label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <label className="mb-1 block text-xs text-neutral-500">
             Company
           </label>
@@ -370,7 +372,7 @@ function NewDealForm({ onDone }: { onDone: () => void }) {
             ]}
           />
         </div>
-        <div className="w-36">
+        <div className="w-full sm:w-36">
           <label className="mb-1 block text-xs text-neutral-500">
             Amount (USD)
           </label>

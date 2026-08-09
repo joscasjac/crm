@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
@@ -18,6 +18,7 @@ import { NAV_ITEMS } from "./AppLayout";
 const SECTIONS = [
   { id: "team", label: "Team" },
   { id: "integrations", label: "Integrations" },
+  { id: "slack", label: "Slack" },
   { id: "email", label: "Email" },
   { id: "ai", label: "AI provider" },
   { id: "sidebar", label: "Sidebar" },
@@ -29,6 +30,7 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 const SUBTITLES: Record<SectionId, string> = {
   team: "Workspace members and sign-in.",
   integrations: "API keys and what each one enables.",
+  slack: "Notifications and the /crm bot, off by default.",
   email: "Provider, from identity, and signature.",
   ai: "Which model provider runs the chat surfaces.",
   sidebar: "Show or hide sidebar items.",
@@ -67,6 +69,7 @@ export function Settings() {
         <div className="min-w-0 flex-1">
           {active === "team" ? <TeamSection /> : null}
           {active === "integrations" ? <IntegrationsSection /> : null}
+          {active === "slack" ? <SlackSection /> : null}
           {active === "email" ? <EmailSection /> : null}
           {active === "ai" ? <AiSection /> : null}
           {active === "sidebar" ? <SidebarSection /> : null}
@@ -79,9 +82,17 @@ export function Settings() {
 
 function TeamSection() {
   const users = useQuery(api.users.list);
+  const demo = useQuery(api.demo.info);
   return (
     <Panel className="p-4">
       <h3 className="mb-3 text-sm font-medium text-white">Team</h3>
+      {demo?.demoMode ? (
+        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-200/90">
+          <span className="font-medium">Demo users.</span> Everyone below is
+          fake, seeded with the demo data. None of them can sign in or
+          receive email. Your fork starts with its own team list.
+        </div>
+      ) : null}
       <div className="flex flex-col gap-2">
         {users?.map((user) => (
           <div key={user._id} className="flex items-center gap-2 text-sm">
@@ -212,6 +223,359 @@ function IntegrationsSection() {
         </p>
       </Panel>
     </div>
+  );
+}
+
+function SlackSection() {
+  const capabilities = useQuery(api.capabilities.status);
+  const settings = useQuery(api.slack.settings);
+  const setSettings = useMutation(api.slack.setSettings);
+  const sendTest = useAction(api.slack.sendTest);
+  const listChannels = useAction(api.slack.channels);
+
+  // Channel picker state: channels load on demand through a bot-token
+  // action, then filter locally as you type.
+  const [channels, setChannels] = useState<Array<{
+    id: string;
+    name: string;
+    isPrivate: boolean;
+  }> | null>(null);
+  const [channelSearch, setChannelSearch] = useState("");
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+
+  // Test button state.
+  const [testStatus, setTestStatus] = useState<
+    { kind: "success" | "error"; message: string } | null
+  >(null);
+  const [testing, setTesting] = useState(false);
+
+  // Allowed email domain draft for the bot card.
+  const [domainDraft, setDomainDraft] = useState("");
+  const [domainLoaded, setDomainLoaded] = useState(false);
+  useEffect(() => {
+    if (!settings || domainLoaded) return;
+    setDomainDraft(settings.allowedEmailDomain ?? "");
+    setDomainLoaded(true);
+  }, [settings, domainLoaded]);
+
+  const anySendConfigured =
+    (capabilities?.slackWebhook ?? false) || (capabilities?.slackBot ?? false);
+
+  const loadChannels = async () => {
+    setChannelsLoading(true);
+    setChannelsError(null);
+    try {
+      setChannels(await listChannels());
+    } catch (err) {
+      setChannelsError(
+        err instanceof Error ? err.message : "Could not load channels",
+      );
+    } finally {
+      setChannelsLoading(false);
+    }
+  };
+
+  const runTest = async () => {
+    setTesting(true);
+    setTestStatus(null);
+    try {
+      await sendTest();
+      setTestStatus({
+        kind: "success",
+        message: "Test message posted. Check your Slack channel.",
+      });
+    } catch (err) {
+      setTestStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Test failed",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const filteredChannels = channels?.filter((channel) =>
+    channel.name.toLowerCase().includes(channelSearch.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Panel className="p-4">
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-white">
+            Slack notifications
+          </h3>
+          <SlackToggle
+            checked={settings?.enabled ?? false}
+            onChange={(next) => void setSettings({ enabled: next })}
+            label={settings?.enabled ? "On" : "Off"}
+          />
+        </div>
+        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+          Post CRM events to a Slack channel: new companies and contacts,
+          deal stage moves, task completions, and agent run summaries. Off
+          by default; nothing posts until you turn it on and connect Slack.
+          The full setup walkthrough is in{" "}
+          <Link to="/docs#slack" className="text-accent hover:underline">
+            Slack: notifications and the bot
+          </Link>
+          .
+        </p>
+        <div className="mb-4 flex flex-col gap-3 text-sm">
+          <IntegrationRow
+            name="Incoming webhook (simple mode)"
+            detail="Set SLACK_WEBHOOK_URL to post to one fixed channel. Two minutes of setup, no app scopes."
+            configured={capabilities?.slackWebhook}
+            docsId="slack"
+          />
+          <IntegrationRow
+            name="Bot token (full mode)"
+            detail="Set SLACK_BOT_TOKEN (xoxb-...) to pick the channel below and enable the /crm bot. Needs the chat:write scope."
+            configured={capabilities?.slackBot}
+            docsId="slack"
+          />
+          <IntegrationRow
+            name="Signing secret (bot commands)"
+            detail="Set SLACK_SIGNING_SECRET so inbound /crm commands verify. Only needed for the bot, not for notifications."
+            configured={capabilities?.slackSigning}
+            docsId="slack"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="primary"
+            onClick={() => void runTest()}
+            disabled={testing || !anySendConfigured}
+          >
+            {testing ? "Sending..." : "Send test message"}
+          </Button>
+          {!anySendConfigured ? (
+            <span className="text-xs text-neutral-600">
+              Set a webhook URL or bot token first.
+            </span>
+          ) : null}
+          {testStatus ? (
+            <span
+              className={`text-xs ${
+                testStatus.kind === "success"
+                  ? "text-emerald-400"
+                  : "text-red-400"
+              }`}
+            >
+              {testStatus.message}
+            </span>
+          ) : null}
+        </div>
+      </Panel>
+
+      <Panel className="p-4">
+        <h3 className="mb-1 text-sm font-medium text-white">What posts</h3>
+        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+          Each event type has its own switch. Demo mode never posts; every
+          send and skip shows on the Activity page.
+        </p>
+        <div className="flex flex-col gap-2.5">
+          <SlackToggle
+            checked={settings?.notifyRecords ?? true}
+            onChange={(next) => void setSettings({ notifyRecords: next })}
+            label="New companies and contacts"
+          />
+          <SlackToggle
+            checked={settings?.notifyDeals ?? true}
+            onChange={(next) => void setSettings({ notifyDeals: next })}
+            label="New deals and stage changes"
+          />
+          <SlackToggle
+            checked={settings?.notifyTasks ?? false}
+            onChange={(next) => void setSettings({ notifyTasks: next })}
+            label="Task completions"
+          />
+          <SlackToggle
+            checked={settings?.notifyAgent ?? false}
+            onChange={(next) => void setSettings({ notifyAgent: next })}
+            label="Agent run summaries"
+          />
+        </div>
+      </Panel>
+
+      <Panel className="p-4">
+        <h3 className="mb-1 text-sm font-medium text-white">Channel</h3>
+        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+          Bot token mode posts to the channel you pick here. Webhook mode
+          ignores this; the channel is baked into the webhook URL. After
+          picking a channel, invite the bot to it in Slack with{" "}
+          <Mono>/invite @your-bot-name</Mono> or posts fail with
+          not_in_channel.
+        </p>
+        <p className="mb-3 text-xs text-neutral-400">
+          Posting to:{" "}
+          {settings?.channelName ? (
+            <span className="text-neutral-200">#{settings.channelName}</span>
+          ) : (
+            <span className="text-neutral-600">no channel selected</span>
+          )}
+        </p>
+        {channels === null ? (
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => void loadChannels()}
+              disabled={channelsLoading || !capabilities?.slackBot}
+            >
+              {channelsLoading ? "Loading..." : "Load channels"}
+            </Button>
+            {!capabilities?.slackBot ? (
+              <span className="text-xs text-neutral-600">
+                Needs SLACK_BOT_TOKEN with the channels:read scope.
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Input
+                value={channelSearch}
+                onChange={(e) => setChannelSearch(e.target.value)}
+                placeholder="Search channels"
+              />
+              <Button
+                onClick={() => void loadChannels()}
+                disabled={channelsLoading}
+              >
+                {channelsLoading ? "Loading..." : "Refresh"}
+              </Button>
+            </div>
+            <div className="max-h-56 overflow-y-auto rounded-md border border-edge">
+              {filteredChannels && filteredChannels.length > 0 ? (
+                filteredChannels.map((channel) => {
+                  const selected = settings?.channelId === channel.id;
+                  return (
+                    <button
+                      key={channel.id}
+                      type="button"
+                      onClick={() =>
+                        void setSettings({
+                          channelId: channel.id,
+                          channelName: channel.name,
+                        })
+                      }
+                      className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-sm transition-colors ${
+                        selected
+                          ? "bg-raised text-white"
+                          : "text-neutral-400 hover:bg-raised/50 hover:text-white"
+                      }`}
+                    >
+                      <span>
+                        #{channel.name}
+                        {channel.isPrivate ? (
+                          <span className="ml-2 text-[10px] text-neutral-600">
+                            private
+                          </span>
+                        ) : null}
+                      </span>
+                      {selected ? (
+                        <span className="text-[10px] text-emerald-400">
+                          selected
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="px-3 py-2 text-xs text-neutral-600">
+                  No channels match.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        {channelsError ? (
+          <p className="mt-2 text-xs text-red-400">{channelsError}</p>
+        ) : null}
+      </Panel>
+
+      <Panel className="p-4">
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-white">/crm bot</h3>
+          <SlackToggle
+            checked={settings?.botEnabled ?? false}
+            onChange={(next) => void setSettings({ botEnabled: next })}
+            label={settings?.botEnabled ? "On" : "Off"}
+          />
+        </div>
+        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+          Work the CRM from Slack: /crm find, /crm deal, /crm note, /crm
+          task, /crm activity. Needs SLACK_BOT_TOKEN and
+          SLACK_SIGNING_SECRET plus a slash command pointed at this
+          deployment; the{" "}
+          <Link to="/docs#slack" className="text-accent hover:underline">
+            docs
+          </Link>{" "}
+          walk through it. Only workspace members can act. The bot matches
+          your Slack profile email against the Team list, or the domain
+          below.
+        </p>
+        <label className="mb-1 block text-xs text-neutral-500">
+          Allowed email domain (optional)
+        </label>
+        <div className="flex items-center gap-2">
+          <div className="w-full sm:w-64">
+            <Input
+              value={domainDraft}
+              onChange={(e) => setDomainDraft(e.target.value)}
+              placeholder="yourcompany.com"
+            />
+          </div>
+          <Button
+            onClick={() =>
+              void setSettings({
+                allowedEmailDomain: domainDraft.trim().replace(/^@/, ""),
+              })
+            }
+          >
+            Save
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-neutral-600">
+          Anyone whose Slack email ends in this domain can use the bot even
+          if they are not in the Team list. Leave blank to restrict to Team
+          members only.
+        </p>
+      </Panel>
+    </div>
+  );
+}
+
+// Small switch used across the Slack card. Same look as the sidebar
+// checkboxes but reads as on/off.
+function SlackToggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+          checked ? "bg-emerald-600" : "bg-raised"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+            checked ? "translate-x-[18px]" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+      {label}
+    </label>
   );
 }
 
@@ -474,11 +838,11 @@ function FieldsSection() {
         with evidence recorded in the ledger.
       </p>
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="w-48">
+        <div className="w-full sm:w-48">
           <label className="mb-1 block text-xs text-neutral-500">Label</label>
           <Input value={label} onChange={(e) => setLabel(e.target.value)} />
         </div>
-        <div className="w-80">
+        <div className="w-full sm:w-80">
           <label className="mb-1 block text-xs text-neutral-500">
             Agent brief (optional)
           </label>

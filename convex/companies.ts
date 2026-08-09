@@ -5,6 +5,7 @@ import { query } from "./_generated/server";
 import { logEvent } from "./logs";
 import { deleteCompanyCascade } from "./model/cascade";
 import { writeMutation } from "./model/functions";
+import { notifySlack } from "./slack";
 
 // Lightweight picker list for forms.
 export const names = query({
@@ -141,6 +142,12 @@ export const create = writeMutation({
       status: "success",
       message: `Created ${args.name}${args.domain ? ` (${args.domain}), enrichment queued` : ""}`,
     });
+    await notifySlack(
+      ctx,
+      "records",
+      `New company: ${args.name}${args.domain ? ` (${args.domain})` : ""}`,
+      `/app/companies/${companyId}`,
+    );
     return companyId;
   },
 });

@@ -113,7 +113,8 @@ export function Activity() {
         <EmptyState message="No log events yet. Create a company or move a deal and watch this fill in." />
       ) : (
         <Panel>
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b border-edge text-xs text-neutral-500">
                 <th className="w-8 px-4 py-3">
@@ -180,6 +181,7 @@ export function Activity() {
               ))}
             </tbody>
           </table>
+          </div>
         </Panel>
       )}
     </div>

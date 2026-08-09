@@ -1,6 +1,6 @@
 # Files
 
-Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
+Brief description of what each file does. Updated 2026-08-09 12:10 UTC.
 
 ## Root
 
@@ -22,12 +22,12 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | File | Description |
 | --- | --- |
 | `convex.config.ts` | Installs all components; declares the required `CONTEXT_DEV_API_KEY`, `FIRECRAWL_API_KEY`, and `EXA_API_KEY` env vars |
-| `schema.ts` | All tables: workspace (with email/AI provider and sidebar prefs), users, companies, contacts, deals, activities, custom fields, agent tasks, agent definitions and versions, runs, facts, chat threads, ask threads, log events |
-| `http.ts` | App-owned root routing; AgentMail webhook at /agentmail/webhook; static hosting registered as the catch-all |
+| `schema.ts` | All tables: workspace (with email/AI provider, sidebar prefs, and Slack settings), users, companies, contacts, deals, activities, custom fields, agent tasks, agent definitions and versions, runs, facts, chat threads, ask threads, log events, slackIdentities |
+| `http.ts` | App-owned root routing; AgentMail webhook at /agentmail/webhook; signed Slack bot routes under /webhooks/slack/; static hosting registered as the catch-all |
 | `staticHosting.ts` | Exposes the deployment query for live reload on deploy |
 | `crons.ts` | Demo reset every 10 minutes, agent queue tick every minute |
 | `aggregates.ts` | Deal rollups by stage and owner, with insert/replace/delete tracking helpers |
-| `demo.ts` | Reset, first-boot seed, demo info for the banner, manual reset request |
+| `demo.ts` | Reset (a no-op when demo mode is off), first-boot seed, demo info for the banner, manual reset request, and `disableDemoMode` for forks |
 | `companies.ts` | Company list, detail, create (queues enrichment), update, delete, re-enrich, names picker |
 | `contacts.ts` | Contact list, detail with facts, create, update, delete |
 | `deals.ts` | Board grouped by stage, create, update, stage change with activity log, delete |
@@ -45,11 +45,14 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | `search.ts` | Command-K global search on full text `search_name` indexes with a bounded scan fallback for domains and emails |
 | `email.ts` | Resend and AgentMail wrappers, provider query and toggle, compose defaults (from identity, signature), the compose mutation with timeline logging and attachment upload URLs, and the sendComposed delivery action; logs a no-op when no key is configured |
 | `web.ts` | Web scrape (Firecrawl or Context.dev) and web search (Exa or Context.dev) internal actions; any one key enables its tool, and a failed primary call falls back to the other configured provider |
-| `capabilities.ts` | Query reporting which integrations have real keys, shown in Settings |
+| `capabilities.ts` | Query reporting which integrations have real keys (including Slack webhook, bot token, and signing secret), shown in Settings |
+| `slack.ts` | Outbound Slack notifications: notifySlack helper with per-event toggles, webhook and bot token delivery through the action retrier, message capping, deep links, test action, channel list action, and the Settings query and mutation |
+| `slackBot.ts` | The /crm slash command bot: v0 request signing verification, three HTTP routes, Slack user to member identity matching, and find, deal, note, task, activity commands that reuse the model helpers |
 | `users.ts` | Team member list for pickers and avatars |
 | `model/access.ts` | Write access checks; demo mode keeps writes open |
 | `model/activities.ts` | Shared timeline write used by activities.create and the Ask slash commands: inserts the row, logs the event, schedules the email reminder |
 | `model/functions.ts` | `writeMutation` custom mutation from convex-helpers; runs the access check before every write |
+| `model/deals.ts` | Shared deal stage-change write used by the UI mutation and the Slack bot: patch, aggregates, timeline, log, Slack notification |
 | `model/cascade.ts` | Manual cascading deletes for companies, contacts, deals |
 | `model/seed.ts` | Demo seed content: workspace, team, companies, contacts, deals, activities, agents |
 
@@ -79,10 +82,10 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 | `app/Ask.tsx` | Claude-style workspace chat: streamed replies, thread sub-sidebar with archive and delete, slash commands, time-aware greeting, provider notes |
 | `app/Activity.tsx` | Live function-outcome log with pause, select one or all, and clear, in the shape of the Convex dashboard |
 | `app/Agents.tsx` | Agent builder: describe a process, manage drafts, deploy, pause |
-| `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Integrations (with the "Adding API keys" panel), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide, Custom fields |
+| `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Integrations (with the "Adding API keys" panel), Slack (master switch, event toggles, channel picker with search, test button, /crm bot), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide, Custom fields |
 | `pages/Landing.tsx` | Marketing page: hero with copy prompt and git clone one-liner, built-with, agent sections, 20 second demo video, demo notes |
 | `pages/Compare.tsx` | Upstream vs Convex comparison table |
-| `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar and active-section highlight: fork, env vars, email and compose, web research, AI providers, auth, deploy, coding agents |
+| `pages/Docs.tsx` | Full setup and usage guide with a sticky sidebar, sidebar search over section titles and body text, and active-section highlight: fork, env vars, email and compose, Slack, web research, AI providers, auth, deploy, coding agents |
 
 ## public/
 
@@ -98,4 +101,4 @@ Brief description of what each file does. Updated 2026-08-09 09:30 UTC.
 
 ## docs/
 
-Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), and `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar).
+Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), and `prds/slack-integration.md` (Slack notifications and the /crm bot).

@@ -10,6 +10,7 @@ import {
 } from "./_generated/server";
 import { logEvent } from "./logs";
 import { writeMutation } from "./model/functions";
+import { notifySlack } from "./slack";
 
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 10 * 60 * 1000;
@@ -151,6 +152,16 @@ export const completeInternal = internalMutation({
       status: args.state === "done" ? "success" : "error",
       message: args.result,
     });
+    await notifySlack(
+      ctx,
+      "agent",
+      `Agent run ${args.state === "done" ? "finished" : "failed"} (${task.kind}): ${args.result}`,
+      task.companyId
+        ? `/app/companies/${task.companyId}`
+        : task.contactId
+          ? `/app/contacts/${task.contactId}`
+          : "/app/agents",
+    );
     return null;
   },
 });

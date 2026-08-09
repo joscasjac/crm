@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: "fork-and-setup", label: "Fork and set it up" },
   { id: "environment-variables", label: "Environment variables" },
   { id: "email", label: "Email: Resend and AgentMail" },
+  { id: "slack", label: "Slack: notifications and the bot" },
   { id: "web-research", label: "Web research: Firecrawl, Exa, Context.dev" },
   { id: "ai-providers", label: "AI providers: OpenAI, Claude, OpenRouter" },
   { id: "auth", label: "Turning on sign-in" },
@@ -131,6 +132,33 @@ const ENV_ROWS: Array<{
     where: "AgentMail dashboard",
   },
   {
+    name: "SLACK_WEBHOOK_URL",
+    required: "No",
+    enables:
+      "Slack notifications in simple mode: posts to one fixed channel through an incoming webhook",
+    where: "api.slack.com/apps, Incoming Webhooks",
+  },
+  {
+    name: "SLACK_BOT_TOKEN",
+    required: "No",
+    enables:
+      "Slack notifications in full mode: the channel picker in Settings and the /crm bot. Starts with xoxb-",
+    where: "api.slack.com/apps, OAuth & Permissions",
+  },
+  {
+    name: "SLACK_SIGNING_SECRET",
+    required: "Only for the /crm bot",
+    enables: "Verifies inbound Slack slash commands and interactions",
+    where: "api.slack.com/apps, Basic Information",
+  },
+  {
+    name: "APP_URL",
+    required: "No",
+    enables:
+      "Overrides the base URL used in Slack deep links, for custom domains",
+    where: "your own domain",
+  },
+  {
     name: "FIRECRAWL_WEBHOOK_SECRET",
     required: "No",
     enables: "Verifies Firecrawl crawl webhooks in production",
@@ -152,6 +180,20 @@ export function Docs() {
     if (!hash) return;
     document.getElementById(hash.slice(1))?.scrollIntoView();
   }, [hash]);
+
+  // Sidebar search: filters the section list by title, and by the actual
+  // body text of each rendered section, so "not_in_channel" finds the
+  // Slack section even though the label never says it.
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const visibleSections =
+    query === ""
+      ? SECTIONS
+      : SECTIONS.filter((section) => {
+          if (section.label.toLowerCase().includes(query)) return true;
+          const body = document.getElementById(section.id)?.textContent ?? "";
+          return body.toLowerCase().includes(query);
+        });
 
   // The sidebar highlights the section under the reading line as you
   // scroll, the way documentation sites do it.
@@ -181,7 +223,18 @@ export function Docs() {
             <p className="mb-2 px-2.5 text-xs font-semibold text-neutral-500">
               Docs
             </p>
-            {SECTIONS.map((section) => (
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSearch("");
+              }}
+              placeholder="Search docs"
+              aria-label="Search docs"
+              className="mb-2 w-full rounded-md border border-edge bg-panel px-2.5 py-1.5 text-[13px] text-white placeholder:text-neutral-600 focus:border-accent focus:outline-none"
+            />
+            {visibleSections.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
@@ -194,6 +247,17 @@ export function Docs() {
                 {section.label}
               </a>
             ))}
+            {visibleSections.length === 0 ? (
+              <p className="px-2.5 py-1.5 text-xs text-neutral-600">
+                No sections match.
+              </p>
+            ) : null}
+            <a
+              href="https://github.com/waynesutton/trycrm-convex/issues"
+              className="mt-2 border-t border-edge px-2.5 pt-3 text-[13px] text-neutral-500 transition-colors hover:text-white"
+            >
+              File an issue
+            </a>
           </nav>
         </aside>
 
@@ -392,6 +456,11 @@ npm install`}</Code>
 npx convex env set FIRECRAWL_API_KEY unset
 npx convex env set EXA_API_KEY unset`}</Code>
             <p>
+              These set your dev deployment only. Production keeps its own
+              variables; the deploy section below repeats these commands
+              with <K>--prod</K>.
+            </p>
+            <p>
               <span className="text-white">Step 3.</span> Run the app locally.
               In a second terminal:
             </p>
@@ -497,6 +566,12 @@ npx convex env set EXA_API_KEY unset`}</Code>
               </li>
             </ul>
             <p>
+              Set keys from the terminal. Production keeps its own copies,
+              so run each command again with <K>--prod</K> if you deployed:
+            </p>
+            <Code>{`npx convex env set RESEND_API_KEY re_...
+npx convex env set RESEND_API_KEY re_... --prod  # production`}</Code>
+            <p>
               The toggle lives in Settings under Email. It stores one field
               on the workspace row, so switching is instant and applies to
               every message sent afterward. You can keep keys for both
@@ -524,6 +599,147 @@ npx convex env set EXA_API_KEY unset`}</Code>
               </Ext>
               . AgentMail always sends from your inbox address, so the from
               fields apply to Resend only.
+            </p>
+          </Section>
+
+          <Section id="slack" title="Slack: notifications and the bot">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-[13px] leading-relaxed text-amber-200/90">
+              <span className="font-medium">Untested.</span> This integration
+              was built against Slack's current API docs but has not been run
+              against a live Slack workspace yet. The Activity page logs every
+              send, skip, and failure, so start there if something misbehaves,
+              and open a GitHub issue if you hit a bug.
+            </div>
+            <p>
+              The CRM can post to Slack when things happen: a company or
+              contact is created, a deal moves stage, a task completes, or
+              an agent finishes a run. There is also an optional{" "}
+              <K>/crm</K> slash command for working records from inside
+              Slack. Everything is off by default. A fork with no Slack
+              setup runs exactly like before; sends log as no-ops on the
+              Activity page, the same way email behaves without keys.
+            </p>
+            <p>
+              Turn it on in Settings, then Slack: flip the master switch,
+              pick which events post, and connect one of two modes. Dev and
+              production deployments keep separate environment variables, so
+              every <K>env set</K> command below runs twice if you deployed:
+              once as shown for dev, once with <K>--prod</K> for production.
+            </p>
+            <p>
+              <span className="text-white">
+                Simple mode: incoming webhook.
+              </span>{" "}
+              Fastest path, one env var, posts to one fixed channel. Create
+              a Slack app at{" "}
+              <Ext href="https://api.slack.com/apps">api.slack.com/apps</Ext>{" "}
+              (From scratch, pick your workspace), open{" "}
+              <span className="text-white">Incoming Webhooks</span>, switch
+              it on, click{" "}
+              <span className="text-white">Add New Webhook to Workspace</span>
+              , and pick the channel. Slack gives you a URL starting with{" "}
+              <K>https://hooks.slack.com/services/</K>. Set it:
+            </p>
+            <Code>{`npx convex env set SLACK_WEBHOOK_URL https://hooks.slack.com/services/...
+npx convex env set SLACK_WEBHOOK_URL https://hooks.slack.com/services/... --prod  # production`}</Code>
+            <p>
+              That is the whole setup. The channel picker in Settings is
+              ignored in this mode because the webhook URL already encodes
+              the channel. Full webhook docs:{" "}
+              <Ext href="https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/">
+                sending messages using incoming webhooks
+              </Ext>
+              .
+            </p>
+            <p>
+              <span className="text-white">Full mode: bot token.</span> Lets
+              you pick the channel from Settings and enables the{" "}
+              <K>/crm</K> bot. In the same Slack app, open{" "}
+              <span className="text-white">OAuth &amp; Permissions</span> and
+              add these Bot Token Scopes: <K>chat:write</K> to post,{" "}
+              <K>channels:read</K> to list public channels for the picker,{" "}
+              <K>groups:read</K> if you want private channels in the picker,
+              and <K>users:read</K> plus <K>users:read.email</K> so the bot
+              can verify who is typing commands. Click{" "}
+              <span className="text-white">Install to Workspace</span>, copy
+              the Bot User OAuth Token (starts with <K>xoxb-</K>), and set
+              it:
+            </p>
+            <Code>{`npx convex env set SLACK_BOT_TOKEN xoxb-...
+npx convex env set SLACK_BOT_TOKEN xoxb-... --prod  # production`}</Code>
+            <p>
+              Back in Settings, Slack, click{" "}
+              <span className="text-white">Load channels</span>, search, and
+              pick one. Then invite the bot to that channel in Slack:
+              type <K>/invite @your-bot-name</K> in the channel. Skipping
+              the invite is the most common failure; Slack rejects the post
+              with <K>not_in_channel</K>. Hit{" "}
+              <span className="text-white">Send test message</span> to
+              confirm the pipe works end to end. Scope reference:{" "}
+              <Ext href="https://docs.slack.dev/reference/scopes">
+                Slack permission scopes
+              </Ext>
+              .
+            </p>
+            <p>
+              <span className="text-white">The /crm bot.</span> With a bot
+              token in place, two more steps turn on the slash command.
+              First set the signing secret, found under{" "}
+              <span className="text-white">Basic Information</span>, App
+              Credentials, in your Slack app:
+            </p>
+            <Code>{`npx convex env set SLACK_SIGNING_SECRET your-signing-secret
+npx convex env set SLACK_SIGNING_SECRET your-signing-secret --prod  # production`}</Code>
+            <p>
+              Then create the command under{" "}
+              <span className="text-white">Slash Commands</span>: command{" "}
+              <K>/crm</K>, request URL{" "}
+              <K>{`https://YOUR-DEPLOYMENT.convex.site/webhooks/slack/commands`}</K>
+              , and a short description. Your deployment name is in the
+              Convex dashboard; it is the <K>.convex.site</K> domain, not{" "}
+              <K>.convex.cloud</K>. Finally flip the /crm bot switch in
+              Settings, Slack. Commands:
+            </p>
+            <Code>{`/crm find Acme            look up a company, contact, or deal
+/crm deal Acme won        move a deal to a stage (/crm stages lists them)
+/crm note Acme "Called them, demo booked"
+/crm task Acme "Send the proposal by Friday"
+/crm activity Acme        the last ten timeline entries
+/crm help`}</Code>
+            <p>
+              Every inbound request is verified with Slack's signed secrets
+              scheme (
+              <Ext href="https://docs.slack.dev/authentication/verifying-requests-from-slack/">
+                verifying requests from Slack
+              </Ext>
+              ) and only workspace members can act: the bot matches the
+              Slack profile email against the Team list in Settings, or an
+              allowed email domain you set. Writes from Slack show up on
+              the record timeline and Activity page attributed as{" "}
+              <K>Name (Slack)</K>. Demo mode stays read only from Slack.
+            </p>
+            <p>
+              <span className="text-white">Deep links.</span> Messages
+              include an “Open in CRM” link back to the record.
+              By default it points at your deployment's{" "}
+              <K>.convex.site</K> URL; if you serve the app from a custom
+              domain, set <K>APP_URL</K> to that origin.
+            </p>
+            <p>
+              <span className="text-white">Troubleshooting.</span>{" "}
+              <K>not_in_channel</K> means invite the bot with{" "}
+              <K>/invite</K>. <K>invalid_auth</K> means the token is wrong
+              or was revoked; reinstall the app and set the new token.{" "}
+              <K>missing_scope</K> names the scope to add under OAuth &amp;
+              Permissions (re-install the app after adding scopes). A 401
+              on slash commands means the signing secret does not match.
+              Rate limited posts retry automatically with backoff through
+              the{" "}
+              <Ext href="https://www.convex.dev/components/retrier">
+                action retrier component
+              </Ext>
+              . Every send, skip, and failure is logged on the Activity
+              page, so start there.
             </p>
           </Section>
 
@@ -575,6 +791,12 @@ npx convex env set EXA_API_KEY unset`}</Code>
               configured” note and the agent repeats it to you, naming
               the keys that turn the feature on. Nothing is faked.
             </p>
+            <p>
+              A real key replaces the <K>unset</K> sentinel with the same
+              command, and production needs its own copy with <K>--prod</K>:
+            </p>
+            <Code>{`npx convex env set EXA_API_KEY your-key
+npx convex env set EXA_API_KEY your-key --prod  # production`}</Code>
           </Section>
 
           <Section
@@ -591,6 +813,11 @@ npx convex env set EXA_API_KEY unset`}</Code>
             <Code>{`npx convex env set OPENAI_API_KEY sk-...
 npx convex env set ANTHROPIC_API_KEY sk-ant-...
 npx convex env set OPENROUTER_API_KEY sk-or-...`}</Code>
+            <p>
+              Production keeps separate variables, so run the same command
+              with <K>--prod</K> when you deploy:
+            </p>
+            <Code>{`npx convex env set OPENAI_API_KEY sk-... --prod`}</Code>
             <ul className="flex list-disc flex-col gap-2 pl-5">
               <li>
                 <span className="text-white">OpenAI</span> is the default,
@@ -655,9 +882,17 @@ npx @convex-dev/auth`}</Code>
             <p>
               The CLI wizard creates <K>convex/auth.ts</K> and the http routes
               for you. Then wrap the app in the auth provider from{" "}
-              <K>@convex-dev/auth/react</K>, add a sign-in page, and flip the
-              workspace's <K>demoMode</K> to false so the reset cron stops
-              running and writes require a signed-in user. The{" "}
+              <K>@convex-dev/auth/react</K>, add a sign-in page, and turn off
+              demo mode so the reset stops wiping data and writes require a
+              signed-in user:
+            </p>
+            <Code>{`npx convex run demo:disableDemoMode         # dev
+npx convex run demo:disableDemoMode --prod  # production`}</Code>
+            <p>
+              Once demo mode is off the reset handler is a no-op, but the cron
+              still fires until you delete the <K>demo reset</K> line from{" "}
+              <K>convex/crons.ts</K>. Keep the <K>agent tick</K> line; it
+              drives the agent task queue. The{" "}
               <Ext href="https://labs.convex.dev/auth/setup">
                 Convex Auth setup guide
               </Ext>{" "}
@@ -760,6 +995,12 @@ npx convex env set EXA_API_KEY unset --prod`}</Code>
                 instead of touching yours.
               </li>
             </ul>
+            <p>
+              Using your fork as a real CRM, not a public demo? There is a
+              second prompt for that. It turns off demo mode so the 10 minute
+              reset cron can never wipe your data, then removes the cron:
+            </p>
+            <Code>{`I forked waynesutton/trycrm-convex and I am using it as a real CRM, not a public demo. Make sure my data is never wiped: run npx convex run demo:disableDemoMode on my dev deployment, and if I have a production deployment run it again with --prod. Then delete the demo reset cron line from convex/crons.ts and push. Leave the agent tick cron in place. Finish by confirming the workspace row has demoMode set to false.`}</Code>
           </Section>
 
           <Section id="components" title="Every component in this app">

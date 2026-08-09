@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { agentmailConfigured, resendConfigured } from "./email";
+import {
+  slackBotConfigured,
+  slackSigningConfigured,
+  slackWebhookConfigured,
+} from "./slack";
 import { exaConfigured, firecrawlConfigured } from "./web";
 
 // Which optional integrations have real keys on this deployment. The
@@ -20,6 +25,9 @@ export const status = query({
     agentmail: v.boolean(),
     firecrawl: v.boolean(),
     exa: v.boolean(),
+    slackWebhook: v.boolean(),
+    slackBot: v.boolean(),
+    slackSigning: v.boolean(),
   }),
   handler: async () => {
     return {
@@ -31,6 +39,9 @@ export const status = query({
       agentmail: agentmailConfigured(),
       firecrawl: firecrawlConfigured(),
       exa: exaConfigured(),
+      slackWebhook: slackWebhookConfigured(),
+      slackBot: slackBotConfigured(),
+      slackSigning: slackSigningConfigured(),
     };
   },
 });
