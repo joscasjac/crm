@@ -238,8 +238,8 @@ function DemoVideo() {
     <section className="mx-auto max-w-4xl px-4 pb-14">
       <h2 className="text-2xl font-semibold text-white">See it in 19 seconds</h2>
       <p className="mt-2 text-neutral-400">
-        Companies enrich themselves, deals move in real time, and agents build agents. One Convex
-        deployment runs all of it.
+        Companies enrich themselves, deals move in real time, agents book their own follow-ups, and
+        agents build agents. One Convex deployment runs all of it.
       </p>
       <div className="mt-6 overflow-hidden rounded-lg border border-edge bg-panel">
         <video
