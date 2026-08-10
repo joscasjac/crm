@@ -6,6 +6,10 @@
 
 ## completed
 
+- 2026-08-10 00:25 UTC: Updated the ForkIt section copy on the landing page (src/pages/Landing.tsx) from "One npm install, one Convex deployment" to "One clone, one Convex deployment" so the pitch is package manager neutral. The repo itself still documents npm install in the README and Docs, which stays accurate for the default path.
+
+- 2026-08-09 23:49 UTC: Updated the three demo team user emails in convex/model/seed.ts from @trycomp.ai to @realtimecrm.dev (patrick, dan, lewis). Sam Whitfield's contact email and the Comp AI company domain stay on trycomp.ai since they are seeded company data, not team members. Convex dev pushed the change; the demo shows the new emails after the next 10 minute reset. Verified: no lint errors, functions pushed clean.
+
 - 2026-08-09 23:42 UTC: Fixed the demo banner and warning callout font color in light mode. The three amber warning surfaces (DemoBanner, the Settings API key note, the Docs demo callout) all use text-amber-200/90, which was never remapped in the light theme, so pale amber text sat on a near-white background. Declared --color-amber-200 and --color-amber-500 in src/index.css following the existing token pattern: dark keeps the Tailwind defaults, light remaps text to a deep amber (#92400e, about 7:1 on white) and the border/tint to amber 600 (#d97706). Audited every raw palette class in src; amber was the only one missing a light remap (bg-emerald-600 toggle track reads fine on both themes). Verified: screenshots of the banner on localhost:5174 in light and dark mode.
 
 - 2026-08-09 23:26 UTC: Added two missing rows to the Compare page (src/pages/Compare.tsx) after checking recent CHANGELOG entries: a Slack row (upstream not included; this port has optional event notifications plus the /crm bot over signed HTTP actions, off by default) and a Tables and custom fields row (per-entity column rename, hide, pin, new-record defaults, and four custom field types as real columns). Verified: eslint and tsc clean.

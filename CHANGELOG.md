@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.13.12] (2026-08-10)
+
+Fork section copy goes package manager neutral. Timestamp: 2026-08-10 00:25 UTC.
+
+### Changed
+
+- The "Fork it. It's yours." blurb now reads "One clone, one Convex deployment, no other services to stand up" instead of naming npm, since forkers can use npm, bun, or pnpm and the point is zero extra infrastructure (`src/pages/Landing.tsx`)
+
+## [2.13.11] (2026-08-09)
+
+Demo team emails move to the real domain. Timestamp: 2026-08-09 23:49 UTC.
+
+### Changed
+
+- The three seeded team members (Patrick, Dan, Lewis) now use @realtimecrm.dev emails instead of @trycomp.ai (`convex/model/seed.ts`). The Comp AI company record and its contact Sam Whitfield keep the trycomp.ai domain since they are pipeline data, not team members. The demo picks up the new emails on the next scheduled reset
+
 ## [2.13.10] (2026-08-09)
 
 Amber warning text readable in light mode. Timestamp: 2026-08-09 23:42 UTC.

@@ -818,7 +818,7 @@ function ForkIt() {
     <section className="border-t border-edge py-14 text-center">
       <h2 className="text-3xl font-semibold text-white">Fork it. It's yours.</h2>
       <p className="mx-auto mt-3 max-w-md text-sm text-neutral-400">
-        MIT licensed. One npm install, one Convex deployment, no other services to stand up.
+        MIT licensed. One clone, one Convex deployment, no other services to stand up.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <CopyPromptButton />

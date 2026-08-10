@@ -19,19 +19,19 @@ export async function seedAll(ctx: MutationCtx, now: number): Promise<void> {
 
   const patrick = await ctx.db.insert("users", {
     name: "Patrick Onusko",
-    email: "patrick@trycomp.ai",
+    email: "patrick@realtimecrm.dev",
     role: "owner",
     avatarUrl: "/landing/avatar-patrick.jpg",
   });
   const dan = await ctx.db.insert("users", {
     name: "Dan Cole",
-    email: "dan@trycomp.ai",
+    email: "dan@realtimecrm.dev",
     role: "member",
     avatarUrl: "/landing/avatar-dan.png",
   });
   const lewis = await ctx.db.insert("users", {
     name: "Lewis Marsh",
-    email: "lewis@trycomp.ai",
+    email: "lewis@realtimecrm.dev",
     role: "member",
     avatarUrl: "/landing/avatar-user.png",
   });
