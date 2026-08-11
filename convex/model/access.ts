@@ -3,8 +3,9 @@ import type { Doc } from "../_generated/dataModel";
 
 // The single place where write access is decided. In demo mode every visitor
 // may read and write, and a cron resets the content every ten minutes. When
-// Convex Auth is wired (see docs/deploy.md), this is the function that
-// switches to ctx.auth.getUserIdentity() plus the workspace allow list.
+// Convex Auth is wired (see "Not built yet" in AGENTS.md), this is the
+// function that switches to ctx.auth.getUserIdentity() plus the workspace
+// allow list.
 export async function getWorkspace(
   ctx: QueryCtx | MutationCtx,
 ): Promise<Doc<"workspace">> {
