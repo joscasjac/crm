@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.13.13] (2026-08-11)
+
+Community PRs adopted: AGENTS.md rewritten for the Convex port, link hover states restored, plus a shared TextLink component. Timestamp: 2026-08-11 19:20 UTC.
+
+### Changed
+
+- AGENTS.md now describes this repo instead of the pre-port stack: the doc index points at real paths (convex/, files.md, prds/, adrs/, docs/upstream/), the Convex conventions section covers writeMutation, index-first reads, and the unset sentinel, the demo reset cron is called out up front, and Convex Auth and mailbox sync live in an honest "Not built yet" section. Contributed by Fagner Sales in PR 1 (`AGENTS.md`)
+- Inline links across Docs, Settings, Landing, and ComposeEmail render through a new shared TextLink component with two treatments (always underlined for docs, hover underline for settings), so link classes cannot drift per call site (`src/components/ui.tsx`, `src/pages/Docs.tsx`, `src/app/Settings.tsx`, `src/pages/Landing.tsx`, `src/components/ComposeEmail.tsx`)
+- `@convex-dev/workflow` bumped 0.4.4 to 0.4.5 after a version pass over every component in convex.config.ts; everything else is current (`package-lock.json`)
+
+### Fixed
+
+- Four Docs links copied the Ext class list and dropped the hover rule, so hovering changed nothing; nine Settings links drew their hover underline flush on the baseline through descenders. Both fixed by Fagner Sales in PR 2, and the upstream link on Compare gained the same 2px offset (`src/pages/Docs.tsx`, `src/app/Settings.tsx`, `src/pages/Compare.tsx`)
+- The write access comment in `convex/model/access.ts` pointed at docs/deploy.md, which does not exist; it now points at the AGENTS.md "Not built yet" section
+
 ## [2.13.12] (2026-08-10)
 
 Fork section copy goes package manager neutral. Timestamp: 2026-08-10 00:25 UTC.

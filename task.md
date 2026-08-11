@@ -6,6 +6,8 @@
 
 ## completed
 
+- 2026-08-11 19:20 UTC: Adopted both community PRs and landed follow-ups. PRD: prds/adopt-community-prs.md. Cherry-picked PR 1 (AGENTS.md rewrite for the Convex port, every claim verified against the repo first) and PR 2 (restored link hover states in src/pages/Docs.tsx and src/app/Settings.tsx) keeping Fagner Sales as author. Follow-ups: fixed the stale docs/deploy.md reference in convex/model/access.ts, added a shared TextLink component to src/components/ui.tsx and migrated Docs, Settings, Landing, and ComposeEmail to it (Compare keeps its neutral treatment plus the 2px offset), and bumped @convex-dev/workflow 0.4.4 to 0.4.5 after a version pass over convex.config.ts components. Verified: npm run check-types and npm run lint clean.
+
 - 2026-08-10 00:25 UTC: Updated the ForkIt section copy on the landing page (src/pages/Landing.tsx) from "One npm install, one Convex deployment" to "One clone, one Convex deployment" so the pitch is package manager neutral. The repo itself still documents npm install in the README and Docs, which stays accurate for the default path.
 
 - 2026-08-09 23:49 UTC: Updated the three demo team user emails in convex/model/seed.ts from @trycomp.ai to @realtimecrm.dev (patrick, dan, lewis). Sam Whitfield's contact email and the Comp AI company domain stay on trycomp.ai since they are seeded company data, not team members. Convex dev pushed the change; the demo shows the new emails after the next 10 minute reset. Verified: no lint errors, functions pushed clean.
