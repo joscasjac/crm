@@ -26,7 +26,7 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `http.ts` | App-owned root routing; AgentMail webhook at /agentmail/webhook; signed Slack bot routes under /webhooks/slack/; static hosting registered as the catch-all |
 | `staticHosting.ts` | Exposes the deployment query for live reload on deploy |
 | `crons.ts` | Demo reset every 10 minutes, agent queue tick every minute |
-| `aggregates.ts` | Deal rollups by stage and owner, with insert/replace/delete tracking helpers |
+| `aggregates.ts` | Deal rollups by stage (namespaces must stay a small fixed set), with insert/replace/delete tracking helpers |
 | `demo.ts` | Reset (a no-op when demo mode is off), first-boot seed, demo info for the banner, manual reset request, and `disableDemoMode` for forks |
 | `companies.ts` | Company list, detail, create (queues enrichment), update, delete, re-enrich, names picker |
 | `contacts.ts` | Contact list, detail with facts, create, update, delete |
@@ -105,4 +105,4 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 
 ## docs/
 
-Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), `prds/slack-integration.md` (Slack notifications and the /crm bot), `prds/task-due-date-calendar.md` (calendar due dates for tasks), `prds/landing-what-it-does-bento.md` (landing bento with mock UI blocks and BYOK), and `prds/adopt-community-prs.md` (community PR adoption, TextLink, component version pass).
+Upstream documentation and the port instructions in `docs/try-crm-instructions/`. PRDs: `prds/convex-port.md` (the port), `prds/components-docs-theme.md` (web research components, docs page, and themes), `prds/ask-tables-logs-polish.md` (Ask chat, activity log, Command-K, table upgrades), `prds/compose-email-settings-docs.md` (compose email, Settings sub-sidebar, docs sidebar), `prds/disable-demo-reset-for-forks.md` (fork-safe demo reset), `prds/mobile-pass.md` (mobile responsiveness pass), `prds/slack-integration.md` (Slack notifications and the /crm bot), `prds/task-due-date-calendar.md` (calendar due dates for tasks), `prds/landing-what-it-does-bento.md` (landing bento with mock UI blocks and BYOK), `prds/adopt-community-prs.md` (community PR adoption, TextLink, component version pass), and `prds/demo-reset-scheduled-function-limit.md` (demo reset scheduling limit fix, dealsByOwner removal).

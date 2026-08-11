@@ -128,5 +128,4 @@ export declare const components: {
   exa: import("@exalabs/convex-exa/_generated/component.js").ComponentApi<"exa">;
   agentmail: import("@agentmail/convex/_generated/component.js").ComponentApi<"agentmail">;
   dealsByStage: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"dealsByStage">;
-  dealsByOwner: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"dealsByOwner">;
 };

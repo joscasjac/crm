@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.13.14] (2026-08-11)
+
+Demo reset no longer trips the 1000 scheduled function limit. Timestamp: 2026-08-11 19:57 UTC.
+
+### Fixed
+
+- The ten minute `demo:reset` cron threw "Too many functions scheduled by this mutation (limit: 1000)" inside `dealsByOwner.clearAll` and rolled back, so the demo stopped resetting. The aggregate was namespaced by owner user id, the reseed mints new ids every run, the component never deletes a namespace, and clearAll schedules one cleanup job per namespace, so after weeks the count crossed 1000 (`convex/demo.ts`)
+
+### Removed
+
+- The `dealsByOwner` aggregate had zero readers, so instead of paging its cleanup it is gone: unmounted from `convex/convex.config.ts`, dropped from the track helpers in `convex/aggregates.ts`, and out of the reset. `dealsByStage` stays because its namespaces are the six fixed stage strings; the comments in both files now state the bounded-namespace rule so this cannot regress
+
 ## [2.13.13] (2026-08-11)
 
 Community PRs adopted: AGENTS.md rewritten for the Convex port, link hover states restored, plus a shared TextLink component. Timestamp: 2026-08-11 19:20 UTC.

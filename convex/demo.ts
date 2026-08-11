@@ -5,7 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import { dealsByOwner, dealsByStage } from "./aggregates";
+import { dealsByStage } from "./aggregates";
 import { logEvent } from "./logs";
 import { seedAll } from "./model/seed";
 
@@ -52,8 +52,9 @@ export const reset = internalMutation({
         await ctx.db.delete(table, row._id);
       }
     }
+    // Stage namespaces are the six fixed stage strings, so this schedules a
+    // handful of cleanup jobs, far below the 1000 per mutation limit.
     await dealsByStage.clearAll(ctx);
-    await dealsByOwner.clearAll(ctx);
     await seedAll(ctx, Date.now());
     await logEvent(ctx, {
       kind: "C",

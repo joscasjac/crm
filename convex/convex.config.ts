@@ -92,9 +92,12 @@ app.use(exa, {
 // convex/http.ts at /agentmail/webhook.
 app.use(agentmail);
 
-// Dashboard rollups: pipeline value by stage, open deals by owner. Keeps the
-// dashboard summary at O(log n) instead of scanning the deals table.
+// Dashboard rollups: pipeline value by stage. Keeps the dashboard summary at
+// O(log n) instead of scanning the deals table. Namespaces must be a small
+// fixed set (the six stages). A dealsByOwner aggregate namespaced by user id
+// was removed: the demo reseed mints new user ids every ten minutes, each id
+// became a namespace the component never deletes, and clearAll eventually
+// exceeded the 1000 scheduled function limit per mutation.
 app.use(aggregate, { name: "dealsByStage" });
-app.use(aggregate, { name: "dealsByOwner" });
 
 export default app;
