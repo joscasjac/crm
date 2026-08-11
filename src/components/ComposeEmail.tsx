@@ -1,9 +1,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { Button } from "./ui";
+import { Button, TextLink } from "./ui";
 
 // A floating compose window in the Gmail style but on the app theme:
 // draggable by its title bar, resizable from the corner, markdown body
@@ -403,9 +402,9 @@ export function ComposeEmail({
         {configured === false ? (
           <p className="min-w-0 flex-1 truncate text-right text-[11px] text-neutral-500">
             {providerLabel} has no key, so sending is off.{" "}
-            <Link to="/app/settings/email" className="text-accent hover:underline">
+            <TextLink to="/app/settings/email" variant="hover">
               Set it up
-            </Link>
+            </TextLink>
           </p>
         ) : null}
         {error ? (

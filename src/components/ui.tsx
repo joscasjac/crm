@@ -1,8 +1,49 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { initials } from "../lib/format";
 
 // Small shared primitives so every screen reads the same.
+
+// Inline text link with the two treatments used across the app, so the class
+// strings live in one place and cannot drift per call site. "underline" is
+// the docs style: always underlined, edge-colored bar that turns accent on
+// hover. "hover" underlines only on hover. Both keep the 2px offset so the
+// bar clears descenders. Pass `to` for an in-app route or `href` for an
+// external or same-page anchor.
+const TEXT_LINK_VARIANTS = {
+  underline:
+    "text-accent underline decoration-edge underline-offset-2 hover:decoration-accent",
+  hover: "text-accent underline-offset-2 hover:underline",
+};
+
+export function TextLink({
+  to,
+  href,
+  variant = "underline",
+  className = "",
+  children,
+}: {
+  to?: string;
+  href?: string;
+  variant?: "underline" | "hover";
+  className?: string;
+  children: ReactNode;
+}) {
+  const cls = `${TEXT_LINK_VARIANTS[variant]} ${className}`.trim();
+  if (to !== undefined) {
+    return (
+      <Link to={to} className={cls}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a href={href} className={cls}>
+      {children}
+    </a>
+  );
+}
 
 export function Panel({
   children,

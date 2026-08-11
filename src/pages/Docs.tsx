@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { TextLink } from "../components/ui";
 import { SiteFooter, SiteHeader } from "./Landing";
 
 // The full setup and usage guide. Written for someone who has never deployed
@@ -59,15 +60,9 @@ function K({ children }: { children: string }) {
   );
 }
 
-const LINK_CLASS =
-  "text-accent underline decoration-edge underline-offset-2 hover:decoration-accent";
-
+// External link with the shared docs treatment; TextLink owns the classes.
 function Ext({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a href={href} className={LINK_CLASS}>
-      {children}
-    </a>
-  );
+  return <TextLink href={href}>{children}</TextLink>;
 }
 
 const ENV_ROWS: Array<{
@@ -314,7 +309,7 @@ export function Docs() {
 
           <Section id="using-the-app" title="Using the app">
             <p>
-              Open <Link to="/app" className={LINK_CLASS}>the demo</Link>{" "}
+              Open <TextLink to="/app">the demo</TextLink>{" "}
               and you land on the dashboard. Here is what each section does.
             </p>
             <ul className="flex list-disc flex-col gap-2 pl-5">
@@ -368,13 +363,7 @@ export function Docs() {
                 window: To, Cc, Bcc, markdown with preview, attachments, drag
                 and resize. Sending waits for a Resend or AgentMail key; the
                 timeline records the email either way. Details in the{" "}
-                <a
-                  href="#email"
-                  className={LINK_CLASS}
-                >
-                  email section
-                </a>
-                .
+                <TextLink href="#email">email section</TextLink>.
               </li>
               <li>
                 <span className="text-white">Activity.</span> A live log of
@@ -750,13 +739,7 @@ npx convex env set RESEND_API_KEY re_... --prod  # production`}</Code>
             <p>
               Inbound mail for AgentMail arrives through the webhook covered
               in the{" "}
-              <a
-                href="#email"
-                className={LINK_CLASS}
-              >
-                email section
-              </a>
-              : register{" "}
+              <TextLink href="#email">email section</TextLink>: register{" "}
               <K>{`https://YOUR-DEPLOYMENT.convex.site/agentmail/webhook`}</K>{" "}
               in the AgentMail dashboard, or the same path on your custom
               domain once it is set up.
@@ -1365,12 +1348,7 @@ curl "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \\
             <p>
               The fastest path is to let a coding agent do the setup. The Copy
               the setup prompt button on the{" "}
-              <Link
-                to="/"
-                className={LINK_CLASS}
-              >
-                landing page
-              </Link>{" "}
+              <TextLink to="/">landing page</TextLink>{" "}
               puts this on your clipboard:
             </p>
             <Code>{`Set up waynesutton/trycrm-convex. Install the dependencies with npm, run npx convex dev to create my deployment, set CONTEXT_DEV_API_KEY, FIRECRAWL_API_KEY, and EXA_API_KEY to the literal string unset, and tell me which optional keys I still need.`}</Code>

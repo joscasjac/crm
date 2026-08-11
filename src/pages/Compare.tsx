@@ -140,7 +140,7 @@ export function Compare() {
           The upstream project is{" "}
           <a
             href="https://github.com/trycompai/crm"
-            className="text-neutral-300 underline decoration-edge hover:text-accent"
+            className="text-neutral-300 underline decoration-edge underline-offset-2 hover:text-accent"
           >
             trycompai/crm
           </a>

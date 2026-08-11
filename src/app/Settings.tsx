@@ -10,6 +10,7 @@ import {
   Input,
   PageHeader,
   Panel,
+  TextLink,
 } from "../components/ui";
 import { NAV_ITEMS } from "./AppLayout";
 import { EntitySettingsSection } from "./EntitySettingsSection";
@@ -185,12 +186,9 @@ function IntegrationsSection() {
         </div>
         <p className="mt-4 text-xs leading-relaxed text-neutral-500">
           Every key is explained in the{" "}
-          <Link
-            to="/docs#environment-variables"
-            className="text-accent underline-offset-2 hover:underline"
-          >
+          <TextLink to="/docs#environment-variables" variant="hover">
             environment variables guide
-          </Link>
+          </TextLink>
           , including where to create each account.
         </p>
       </Panel>
@@ -216,24 +214,18 @@ function IntegrationsSection() {
           If a key works on your machine but not on your live site, this
           split is almost always why: it was set on dev only. You can also
           add keys in the{" "}
-          <a
-            href="https://dashboard.convex.dev"
-            className="text-accent underline-offset-2 hover:underline"
-          >
+          <TextLink href="https://dashboard.convex.dev" variant="hover">
             Convex dashboard
-          </a>{" "}
+          </TextLink>{" "}
           under Settings, then Environment Variables, picking the deployment
           first. See{" "}
-          <Link
-            to="/docs#environment-variables"
-            className="text-accent underline-offset-2 hover:underline"
-          >
+          <TextLink to="/docs#environment-variables" variant="hover">
             environment variables
-          </Link>{" "}
+          </TextLink>{" "}
           for the full key list and{" "}
-          <Link to="/docs#deploy" className="text-accent underline-offset-2 hover:underline">
+          <TextLink to="/docs#deploy" variant="hover">
             deploying to production
-          </Link>{" "}
+          </TextLink>{" "}
           for when <Mono>--prod</Mono> matters.
         </p>
       </Panel>
@@ -332,9 +324,9 @@ function SlackSection() {
           deal stage moves, task completions, and agent run summaries. Off
           by default; nothing posts until you turn it on and connect Slack.
           The full setup walkthrough is in{" "}
-          <Link to="/docs#slack" className="text-accent underline-offset-2 hover:underline">
+          <TextLink to="/docs#slack" variant="hover">
             Slack: notifications and the bot
-          </Link>
+          </TextLink>
           .
         </p>
         <div className="mb-4 flex flex-col gap-3 text-sm">
@@ -523,9 +515,9 @@ function SlackSection() {
           task, /crm activity. Needs SLACK_BOT_TOKEN and
           SLACK_SIGNING_SECRET plus a slash command pointed at this
           deployment; the{" "}
-          <Link to="/docs#slack" className="text-accent underline-offset-2 hover:underline">
+          <TextLink to="/docs#slack" variant="hover">
             docs
-          </Link>{" "}
+          </TextLink>{" "}
           walk through it. Only workspace members can act. The bot matches
           your Slack profile email against the Team list, or the domain
           below.
@@ -637,9 +629,9 @@ function EmailSection() {
           agents a persistent inbox with threads synced into Convex. The
           switch works even before keys are set; sending stays off until the
           selected provider is configured. Setup steps for both are in{" "}
-          <Link to="/docs#email" className="text-accent underline-offset-2 hover:underline">
+          <TextLink to="/docs#email" variant="hover">
             email: Resend and AgentMail
-          </Link>
+          </TextLink>
           .
         </p>
         <div className="flex gap-2">
@@ -738,9 +730,9 @@ function AiSection() {
         these keys ship by default: pick a provider, set its key on the
         deployment, and the chat starts reasoning. Until then it answers
         with the exact key it needs. See{" "}
-        <Link to="/docs#ai-providers" className="text-accent underline-offset-2 hover:underline">
+        <TextLink to="/docs#ai-providers" variant="hover">
           AI providers
-        </Link>{" "}
+        </TextLink>{" "}
         for the setup steps.
       </p>
       <div className="flex gap-2">
@@ -834,12 +826,13 @@ function IntegrationRow({
         <p className="text-neutral-200">{name}</p>
         <p className="text-xs text-neutral-500">
           {detail}{" "}
-          <Link
+          <TextLink
             to={`/docs#${docsId}`}
-            className="whitespace-nowrap text-accent underline-offset-2 hover:underline"
+            variant="hover"
+            className="whitespace-nowrap"
           >
             Setup guide
-          </Link>
+          </TextLink>
         </p>
       </div>
       {configured === undefined ? null : (

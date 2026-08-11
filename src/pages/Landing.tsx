@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { TextLink } from "../components/ui";
 
 // The setup prompt users paste into their coding agent after forking.
 // The three required keys stay "unset" here on purpose: the sentinel keeps
@@ -675,12 +676,13 @@ function WhatItDoes() {
             <>
               Every integration is optional. Set a key and the capability turns on; leave it unset
               and the app says so instead of faking results.{" "}
-              <Link
+              <TextLink
                 to="/docs#environment-variables"
-                className="whitespace-nowrap text-accent hover:underline"
+                variant="hover"
+                className="whitespace-nowrap"
               >
                 Every key explained
-              </Link>
+              </TextLink>
             </>
           }
           className="sm:col-span-2 lg:col-span-3"
@@ -712,9 +714,9 @@ function EnvKey({ children }: { children: ReactNode }) {
 // Inline link to the docs section that covers the note.
 function DocsLink({ to, label }: { to: string; label: string }) {
   return (
-    <Link to={to} className="whitespace-nowrap text-accent hover:underline">
+    <TextLink to={to} variant="hover" className="whitespace-nowrap">
       {label}
-    </Link>
+    </TextLink>
   );
 }
 
