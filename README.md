@@ -1,4 +1,4 @@
-<h1 align="center">CRM on Convex</h1>
+<h1 align="center">The Open Source Agent CRM on Convex</h1>
 
 <p align="center">
   <strong>The open source agentic CRM, ported to run entirely on Convex.</strong><br>
@@ -25,25 +25,25 @@ Try it at [convex.link/crmonconvex](https://convex.link/crmonconvex) (served fro
 
 ## The stack
 
-| Layer | Technology |
-| --- | --- |
-| Backend | Convex functions, TypeScript end to end |
-| Database | Convex database with typed schema and indexes |
-| Frontend | React 19, Vite, React Router, Tailwind CSS 4 (dark and light themes) |
-| Hosting | [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting) serving the built app |
-| Agent runtime | [`@convex-dev/agent`](https://www.convex.dev/components/agent) with tools, threads, and message history |
-| Work queues | [`@convex-dev/workpool`](https://www.convex.dev/components/workpool), three pools so slow work cannot starve the dispatcher |
+| Layer            | Technology                                                                                                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend          | Convex functions, TypeScript end to end                                                                                                                                             |
+| Database         | Convex database with typed schema and indexes                                                                                                                                       |
+| Frontend         | React 19, Vite, React Router, Tailwind CSS 4 (dark and light themes)                                                                                                                |
+| Hosting          | [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting) serving the built app                                                                              |
+| Agent runtime    | [`@convex-dev/agent`](https://www.convex.dev/components/agent) with tools, threads, and message history                                                                             |
+| Work queues      | [`@convex-dev/workpool`](https://www.convex.dev/components/workpool), three pools so slow work cannot starve the dispatcher                                                         |
 | Brand enrichment | [`@context-dot-dev/convex`](https://www.convex.dev/components/context-dot-dev/convex), the same Context.dev data the upstream uses; the same key also backs web search and scraping |
-| Web scraping | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex) or Context.dev, the chat agent reads pages as markdown with either key |
-| Web search | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa) or Context.dev, search as an agent tool with either key |
-| AI providers | OpenAI, Claude (Anthropic), or OpenRouter via the AI SDK, switchable in Settings, no key ships by default |
-| Email | [`@convex-dev/resend`](https://www.convex.dev/components/resend) or [`@agentmail/convex`](https://www.convex.dev/components/agentmail/convex), switchable in Settings |
-| Caching | [`@convex-dev/action-cache`](https://www.convex.dev/components/action-cache), 7 day TTL on brand lookups, replaces Redis |
-| Rate limiting | [`@convex-dev/rate-limiter`](https://www.convex.dev/components/rate-limiter) on the enrichment budget |
-| Rollups | [`@convex-dev/aggregate`](https://www.convex.dev/components/aggregate) for pipeline value by stage and owner |
-| Scheduling | Convex cron jobs plus [`@convex-dev/crons`](https://www.convex.dev/components/crons) |
-| Durability | [`@convex-dev/workflow`](https://www.convex.dev/components/workflow) and [`@convex-dev/action-retrier`](https://www.convex.dev/components/retrier) |
-| Migrations | [`@convex-dev/migrations`](https://www.convex.dev/components/migrations) |
+| Web scraping     | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex) or Context.dev, the chat agent reads pages as markdown with either key                |
+| Web search       | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa) or Context.dev, search as an agent tool with either key                                               |
+| AI providers     | OpenAI, Claude (Anthropic), or OpenRouter via the AI SDK, switchable in Settings, no key ships by default                                                                           |
+| Email            | [`@convex-dev/resend`](https://www.convex.dev/components/resend) or [`@agentmail/convex`](https://www.convex.dev/components/agentmail/convex), switchable in Settings               |
+| Caching          | [`@convex-dev/action-cache`](https://www.convex.dev/components/action-cache), 7 day TTL on brand lookups, replaces Redis                                                            |
+| Rate limiting    | [`@convex-dev/rate-limiter`](https://www.convex.dev/components/rate-limiter) on the enrichment budget                                                                               |
+| Rollups          | [`@convex-dev/aggregate`](https://www.convex.dev/components/aggregate) for pipeline value by stage and owner                                                                        |
+| Scheduling       | Convex cron jobs plus [`@convex-dev/crons`](https://www.convex.dev/components/crons)                                                                                                |
+| Durability       | [`@convex-dev/workflow`](https://www.convex.dev/components/workflow) and [`@convex-dev/action-retrier`](https://www.convex.dev/components/retrier)                                  |
+| Migrations       | [`@convex-dev/migrations`](https://www.convex.dev/components/migrations)                                                                                                            |
 
 Package manager is npm. There is no monorepo; `convex/` is the backend, `src/` is the frontend.
 
@@ -84,22 +84,22 @@ Prefer letting a coding agent do this? The landing page has a "Copy the setup pr
 
 Every outside key is optional in practice. The app degrades honestly: features that need a key say so instead of pretending.
 
-| Variable | What it enables | Without it |
-| --- | --- | --- |
-| `CONTEXT_DEV_API_KEY` | Company enrichment from Context.dev brand data, plus web search and page reading for the chat agent when the Exa or Firecrawl key is missing | Enrichment tasks complete with a "not configured" note. Set to `unset` to run keyless. |
-| `FIRECRAWL_API_KEY` | Chat agent reads web pages via Firecrawl. Context.dev covers this when only its key is set | The tool tells the agent which keys enable it. Set to `unset` to run keyless. |
-| `EXA_API_KEY` | Chat agent searches the web via Exa. Context.dev covers this when only its key is set | Same honest degradation. Set to `unset` to run keyless. |
-| `OPENAI_API_KEY` | Chat and agent reasoning when OpenAI is the selected provider | Chat replies name the missing key |
-| `ANTHROPIC_API_KEY` | Chat and agent reasoning when Claude is the selected provider | Same |
-| `OPENROUTER_API_KEY` | Chat and agent reasoning when OpenRouter is the selected provider | Same |
-| `RESEND_API_KEY` | Outbound email through the Resend component | Email sends are logged as no-ops |
-| `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID` | Outbound email plus a persistent agent inbox through AgentMail | Same, logged as no-ops |
-| `SLACK_WEBHOOK_URL` | Slack notifications in simple mode: posts to one fixed channel through an incoming webhook | Slack sends are logged as no-ops |
-| `SLACK_BOT_TOKEN` | Slack notifications in full mode: the channel picker in Settings and the `/crm` bot | Same, logged as no-ops |
-| `SLACK_SIGNING_SECRET` | Verifies inbound Slack slash commands for the `/crm` bot | Bot routes answer 503; notifications unaffected |
-| `APP_URL` | Overrides the base URL in Slack deep links, for custom domains | Links use the `.convex.site` URL |
-| `FIRECRAWL_WEBHOOK_SECRET` | Verifies Firecrawl crawl webhooks | Optional; only needed for webhook-mode crawls |
-| `AGENTMAIL_WEBHOOK_SECRET` | Verifies inbound AgentMail webhooks | Optional; unverified deliveries are rejected |
+| Variable                                   | What it enables                                                                                                                              | Without it                                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `CONTEXT_DEV_API_KEY`                      | Company enrichment from Context.dev brand data, plus web search and page reading for the chat agent when the Exa or Firecrawl key is missing | Enrichment tasks complete with a "not configured" note. Set to `unset` to run keyless. |
+| `FIRECRAWL_API_KEY`                        | Chat agent reads web pages via Firecrawl. Context.dev covers this when only its key is set                                                   | The tool tells the agent which keys enable it. Set to `unset` to run keyless.          |
+| `EXA_API_KEY`                              | Chat agent searches the web via Exa. Context.dev covers this when only its key is set                                                        | Same honest degradation. Set to `unset` to run keyless.                                |
+| `OPENAI_API_KEY`                           | Chat and agent reasoning when OpenAI is the selected provider                                                                                | Chat replies name the missing key                                                      |
+| `ANTHROPIC_API_KEY`                        | Chat and agent reasoning when Claude is the selected provider                                                                                | Same                                                                                   |
+| `OPENROUTER_API_KEY`                       | Chat and agent reasoning when OpenRouter is the selected provider                                                                            | Same                                                                                   |
+| `RESEND_API_KEY`                           | Outbound email through the Resend component                                                                                                  | Email sends are logged as no-ops                                                       |
+| `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID` | Outbound email plus a persistent agent inbox through AgentMail                                                                               | Same, logged as no-ops                                                                 |
+| `SLACK_WEBHOOK_URL`                        | Slack notifications in simple mode: posts to one fixed channel through an incoming webhook                                                   | Slack sends are logged as no-ops                                                       |
+| `SLACK_BOT_TOKEN`                          | Slack notifications in full mode: the channel picker in Settings and the `/crm` bot                                                          | Same, logged as no-ops                                                                 |
+| `SLACK_SIGNING_SECRET`                     | Verifies inbound Slack slash commands for the `/crm` bot                                                                                     | Bot routes answer 503; notifications unaffected                                        |
+| `APP_URL`                                  | Overrides the base URL in Slack deep links, for custom domains                                                                               | Links use the `.convex.site` URL                                                       |
+| `FIRECRAWL_WEBHOOK_SECRET`                 | Verifies Firecrawl crawl webhooks                                                                                                            | Optional; only needed for webhook-mode crawls                                          |
+| `AGENTMAIL_WEBHOOK_SECRET`                 | Verifies inbound AgentMail webhooks                                                                                                          | Optional; unverified deliveries are rejected                                           |
 
 Set any of them with:
 
@@ -216,22 +216,22 @@ What is intentionally off in the demo: sign-in (the code is structured for Conve
 
 The app has a live comparison page at `/compare` and full setup docs at `/docs`. Short version:
 
-| Area | trycompai/crm | This version |
-| --- | --- | --- |
-| Hosting | Vercel plus a separate API | Convex static hosting |
-| Database | Postgres with Prisma | Convex database |
-| Realtime | Polling and invalidation | Reactive queries |
-| Queue | Redis backed workers | Workpool components, queue as a table |
-| Auth | Better Auth | Convex Auth ready, off in demo |
-| Email | Resend SDK calls | Resend or AgentMail components, switchable |
-| Web research | Not included | Firecrawl or Context.dev scraping and Exa or Context.dev search as agent tools; any one key works |
-| AI providers | OpenAI | OpenAI, Claude, or OpenRouter, switchable in Settings |
-| Workspace chat | Per-record chat only | Ask page with streamed replies, slash commands, and thread history |
-| Notes and tasks | Notes on records | Notes and tasks with due dates, reminders, and completion |
-| Search | Per-table inputs | Command-K palette on full text search indexes |
-| Observability | Server logs | Activity page streams function outcomes live |
-| Services to run | Frontend, API, Postgres, Redis, workers | One Convex deployment |
-| Package manager | bun, Turborepo | npm, single package |
+| Area            | trycompai/crm                           | This version                                                                                      |
+| --------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Hosting         | Vercel plus a separate API              | Convex static hosting                                                                             |
+| Database        | Postgres with Prisma                    | Convex database                                                                                   |
+| Realtime        | Polling and invalidation                | Reactive queries                                                                                  |
+| Queue           | Redis backed workers                    | Workpool components, queue as a table                                                             |
+| Auth            | Better Auth                             | Convex Auth ready, off in demo                                                                    |
+| Email           | Resend SDK calls                        | Resend or AgentMail components, switchable                                                        |
+| Web research    | Not included                            | Firecrawl or Context.dev scraping and Exa or Context.dev search as agent tools; any one key works |
+| AI providers    | OpenAI                                  | OpenAI, Claude, or OpenRouter, switchable in Settings                                             |
+| Workspace chat  | Per-record chat only                    | Ask page with streamed replies, slash commands, and thread history                                |
+| Notes and tasks | Notes on records                        | Notes and tasks with due dates, reminders, and completion                                         |
+| Search          | Per-table inputs                        | Command-K palette on full text search indexes                                                     |
+| Observability   | Server logs                             | Activity page streams function outcomes live                                                      |
+| Services to run | Frontend, API, Postgres, Redis, workers | One Convex deployment                                                                             |
+| Package manager | bun, Turborepo                          | npm, single package                                                                               |
 
 ## Project layout
 
