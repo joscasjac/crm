@@ -6,10 +6,9 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
-  query,
 } from "./_generated/server";
 import { logEvent } from "./logs";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 
 const MAX_ATTEMPTS = 3;
@@ -194,7 +193,7 @@ export const scheduleRecheck = writeMutation({
   },
 });
 
-export const forCompany = query({
+export const forCompany = authedQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -206,7 +205,7 @@ export const forCompany = query({
 });
 
 // The agent's upcoming follow-ups across the workspace.
-export const upcoming = query({
+export const upcoming = authedQuery({
   args: {},
   handler: async (ctx) => {
     const open = await ctx.db

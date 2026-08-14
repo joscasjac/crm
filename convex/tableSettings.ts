@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { dealStage } from "./schema";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 
 const entityValidator = v.union(
   v.literal("company"),
@@ -27,7 +27,7 @@ async function settingsRow(
 }
 
 // One read for a table: column prefs plus new-record defaults.
-export const get = query({
+export const get = authedQuery({
   args: { entity: entityValidator },
   returns: v.object({
     columns: v.array(columnPref),

@@ -11,18 +11,14 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import {
-  internalAction,
-  internalQuery,
-  query,
-} from "./_generated/server";
+import { internalAction, internalQuery } from "./_generated/server";
 import type { AiProvider } from "./ai";
 import {
   languageModelFor,
   missingKeyMessage,
   providerConfigured,
 } from "./ai";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 
 // The one tool the record chat needs with zero keys: read our own history.
 // No data vendor can sell you a reply from the person's own address.
@@ -140,7 +136,7 @@ export const recordHistory = internalQuery({
   },
 });
 
-export const threadForCompany = query({
+export const threadForCompany = authedQuery({
   args: { companyId: v.id("companies") },
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
@@ -152,7 +148,7 @@ export const threadForCompany = query({
   },
 });
 
-export const messages = query({
+export const messages = authedQuery({
   args: { threadId: v.string(), paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     return await listUIMessages(ctx, components.agent, {

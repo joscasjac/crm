@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 
 const entityValidator = v.union(
   v.literal("company"),
@@ -9,7 +8,7 @@ const entityValidator = v.union(
 );
 
 // Definitions plus this record's values in one read.
-export const forEntity = query({
+export const forEntity = authedQuery({
   args: { entity: entityValidator, entityId: v.string() },
   handler: async (ctx, args) => {
     const definitions = await ctx.db
@@ -34,7 +33,7 @@ export const forEntity = query({
   },
 });
 
-export const listDefinitions = query({
+export const listDefinitions = authedQuery({
   args: { entity: entityValidator },
   handler: async (ctx, args) => {
     const definitions = await ctx.db
@@ -145,7 +144,7 @@ export const restoreDefinition = writeMutation({
 // Batch read for table views: every active definition for the entity plus
 // values for the visible rows, keyed as `${fieldId}:${entityId}`. One
 // subscription per table instead of one per row.
-export const tableValues = query({
+export const tableValues = authedQuery({
   args: { entity: entityValidator, entityIds: v.array(v.string()) },
   returns: v.object({
     definitions: v.array(

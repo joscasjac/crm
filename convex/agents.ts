@@ -1,11 +1,10 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 
 // Agent definitions are data, versions are rows, deploying is a pointer move.
 // No build step, no redeploy.
 
-export const list = query({
+export const list = authedQuery({
   args: {},
   handler: async (ctx) => {
     const defs = await ctx.db.query("agentDefinitions").collect();
@@ -25,7 +24,7 @@ export const list = query({
   },
 });
 
-export const get = query({
+export const get = authedQuery({
   args: { definitionId: v.id("agentDefinitions") },
   handler: async (ctx, args) => {
     const def = await ctx.db.get("agentDefinitions", args.definitionId);

@@ -102,8 +102,10 @@ export const seedPublic = mutation({
   },
 });
 
-// Drives the demo banner: when the last reset happened, so the client can
-// count down to the next one. The ten minute interval is in convex/crons.ts.
+// Intentionally public: drives the demo banner before any session exists, so
+// it stays on the raw query builder while everything else uses authedQuery
+// (convex/model/functions.ts). The projection is three scalars, no table data.
+// The ten minute reset interval is in convex/crons.ts.
 export const info = query({
   args: {},
   returns: v.union(

@@ -6,10 +6,9 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
-  query,
 } from "./_generated/server";
 import { insertActivity, clip } from "./model/activities";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 
 // Two email providers, both installed, doing different jobs.
 //
@@ -41,7 +40,7 @@ export const agentmailConfigured = (): boolean =>
 export type EmailProvider = "resend" | "agentmail";
 
 // The active provider, for the settings screen.
-export const provider = query({
+export const provider = authedQuery({
   args: {},
   returns: v.union(v.literal("resend"), v.literal("agentmail")),
   handler: async (ctx) => {
@@ -69,7 +68,7 @@ export const setProvider = writeMutation({
 
 // Compose configuration: the from identity and default signature, edited
 // on the Settings email page. All optional with safe fallbacks.
-export const settings = query({
+export const settings = authedQuery({
   args: {},
   returns: v.object({
     fromName: v.union(v.string(), v.null()),

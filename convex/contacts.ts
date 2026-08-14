@@ -1,13 +1,12 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { query } from "./_generated/server";
 import { logEvent } from "./logs";
 import { deleteContactCascade } from "./model/cascade";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 import { entityDefaults } from "./tableSettings";
 
-export const list = query({
+export const list = authedQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
@@ -44,7 +43,7 @@ export const list = query({
   },
 });
 
-export const get = query({
+export const get = authedQuery({
   args: { contactId: v.id("contacts") },
   handler: async (ctx, args) => {
     const contact = await ctx.db.get("contacts", args.contactId);

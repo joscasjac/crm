@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
 import { dealStage } from "./schema";
 import {
   trackDealInsert,
@@ -8,7 +7,7 @@ import {
 import { logEvent } from "./logs";
 import { deleteDealCascade } from "./model/cascade";
 import { changeDealStage } from "./model/deals";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 import { entityDefaults } from "./tableSettings";
 
@@ -23,7 +22,7 @@ export const STAGES = [
 
 // Board view: all deals grouped by stage. Demo scale keeps this bounded; a
 // larger install would paginate per column.
-export const board = query({
+export const board = authedQuery({
   args: {},
   handler: async (ctx) => {
     const result = [];
@@ -53,7 +52,7 @@ export const board = query({
   },
 });
 
-export const get = query({
+export const get = authedQuery({
   args: { dealId: v.id("deals") },
   handler: async (ctx, args) => {
     const deal = await ctx.db.get("deals", args.dealId);

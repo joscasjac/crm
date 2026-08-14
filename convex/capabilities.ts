@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
 import { agentmailConfigured, resendConfigured } from "./email";
+import { authedQuery } from "./model/functions";
 import {
   slackBotConfigured,
   slackSigningConfigured,
@@ -14,7 +14,7 @@ import { exaConfigured, firecrawlConfigured } from "./web";
 const realKey = (value: string | undefined): boolean =>
   !!value && value !== "unset";
 
-export const status = query({
+export const status = authedQuery({
   args: {},
   returns: v.object({
     contextDev: v.boolean(),

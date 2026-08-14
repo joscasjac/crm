@@ -1,15 +1,14 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { query } from "./_generated/server";
 import { logEvent } from "./logs";
 import { deleteCompanyCascade } from "./model/cascade";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 import { entityDefaults } from "./tableSettings";
 
 // Lightweight picker list for forms.
-export const names = query({
+export const names = authedQuery({
   args: {},
   returns: v.array(v.object({ _id: v.id("companies"), name: v.string() })),
   handler: async (ctx) => {
@@ -26,7 +25,7 @@ export const names = query({
 
 // The list view. Search filters by name or domain in memory over one page,
 // which is fine at demo scale; the index keeps the read bounded.
-export const list = query({
+export const list = authedQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
@@ -68,7 +67,7 @@ export const list = query({
   },
 });
 
-export const get = query({
+export const get = authedQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     const company = await ctx.db.get("companies", args.companyId);

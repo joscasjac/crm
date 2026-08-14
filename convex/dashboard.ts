@@ -1,11 +1,11 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { authedQuery } from "./model/functions";
 import { dealsByStage } from "./aggregates";
 import { STAGES } from "./deals";
 
 // Pipeline rollups come from the aggregate component: O(log n) per stage,
 // no table scan, and reactive like everything else.
-export const summary = query({
+export const summary = authedQuery({
   args: {},
   returns: v.object({
     pipelineByStage: v.array(
@@ -53,7 +53,7 @@ export const summary = query({
 });
 
 // Recent activity across the workspace for the dashboard feed.
-export const recentActivity = query({
+export const recentActivity = authedQuery({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("activities").order("desc").take(12);

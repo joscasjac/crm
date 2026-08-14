@@ -2,9 +2,14 @@
 
 ## to do
 
+- Security (Medium): when wiring Convex Auth, enforce workspace.allowedSignIn in requireReadAccess and requireWriteAccess, not just at session creation. PRD: prds/security-review-2026-08.md
 - Optional: set real OPENAI_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, RESEND_API_KEY, or AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID on the deployment (CONTEXT_DEV_API_KEY is already real on prod)
 
 ## completed
+
+- 2026-08-14 07:05 UTC: Fixed the security review findings. PRD: prds/security-review-2026-08.md. Added requireReadAccess (convex/model/access.ts) and authedQuery (convex/model/functions.ts), then moved all 39 queries across 18 convex modules off the raw query builder; only demo:info and the static hosting deploy query stay public, each with an intentionally-public comment. slack:sendTest and slack:channels now require a session outside demo mode. npm audit went from 6 vulnerabilities to 0 via an undici ^7.29.0 override in package.json (audit fix was blocked by the upstream zod v3 peer pin in @exalabs/convex-exa). email:generateUploadUrl needed no change; it already sits behind writeMutation. allowedSignIn enforcement stays queued for the Convex Auth wiring. Verified: convex dev --once, check-types, lint, and npm audit all clean, plus a live probe on dev with demo mode temporarily off: every gated query and slack:channels threw "Not authenticated", demo:info stayed public, and demo mode was restored with reads confirmed open again.
+
+- 2026-08-14 06:40 UTC: Ran the sec-check security review across the whole backend (public function surface, write access layer, HTTP routes and webhooks, component boundaries, crons, uploads, secrets, npm audit, and an unauthenticated probe of both deployments). Findings written to prds/security-review-2026-08.md; fixes queued under to do. No code changed. Headline: writes are gated correctly but reads are entirely unauthenticated, and disableDemoMode does not close them.
 
 - 2026-08-11 19:57 UTC: Fixed the demo:reset crash "Too many functions scheduled by this mutation (limit: 1000)". PRD: prds/demo-reset-scheduled-function-limit.md. Root cause: dealsByOwner was namespaced by owner user id, the ten minute reseed mints new ids every run, the aggregate component never deletes a namespace, and clearAll schedules one job per namespace, so the count crossed 1000 and every reset rolled back. dealsByOwner had zero readers, so it was removed from convex/convex.config.ts, convex/aggregates.ts, and convex/demo.ts; dealsByStage stays (six fixed stage namespaces). Verified: convex dev --once, check-types, and lint clean; npx convex run demo:reset succeeds; dashboard:summary returns correct rollups. The unmounted dealsByOwner data can be deleted from the Convex dashboard on dev and prod.
 

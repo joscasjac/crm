@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+Security review run and its findings fixed. Timestamps: review 2026-08-14 06:40 UTC, fixes 2026-08-14 07:05 UTC.
+
+### Security
+
+- Ran the `sec-check` skill across the backend. Findings written to `prds/security-review-2026-08.md`. The write path was sound (every mutation goes through `writeMutation`, every scheduler and cron target is `internal.*`, Slack signing is correct, secrets stay in env vars); the gap was the read surface: every query was unauthenticated, and `disableDemoMode` gated writes only (2026-08-14)
+- Read surface gated. New `requireReadAccess` in `convex/model/access.ts` (open in demo mode or before first seed, session required otherwise) and `authedQuery` in `convex/model/functions.ts` built with `customQuery` from convex-helpers. All 39 queries across 18 modules moved to it; a fork that turns demo mode off no longer serves contacts, emails, deal amounts, or logs to unauthenticated callers. Only `demo:info` and the component-owned static hosting query stay public, each marked intentionally public. Verified with a live unauthenticated probe on dev with demo mode temporarily off (2026-08-14)
+- `slack:sendTest` and `slack:channels` now require a session outside demo mode; before, an anonymous caller on a non-demo fork could post into the workspace Slack channel and list channel names once a bot token was set (`convex/slack.ts`) (2026-08-14)
+- `npm audit` down from 6 vulnerabilities (1 high, 5 moderate) to 0. `npm audit fix` was blocked by the upstream zod v3 peer pin in `@exalabs/convex-exa`, so `package.json` overrides `undici` to `^7.29.0`, replacing the vulnerable 5.29.0 under `@ai-sdk/provider-utils`, which only lazily uses `Agent` and `fetch` (2026-08-14)
+
 ## [2.13.14] (2026-08-11)
 
 Demo reset no longer trips the 1000 scheduled function limit. Timestamp: 2026-08-11 19:57 UTC.

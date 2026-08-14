@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
-import { internalMutation, query } from "./_generated/server";
-import { writeMutation } from "./model/functions";
+import { internalMutation } from "./_generated/server";
+import { authedQuery, writeMutation } from "./model/functions";
 
 // The activity log the Activity page renders. Mutations call logEvent in the
 // same transaction as their write; actions go through the record internal
@@ -41,7 +41,7 @@ export const record = internalMutation({
 
 // Newest first, bounded. The demo reset and the Clear button keep the table
 // small, so a take is enough here.
-export const list = query({
+export const list = authedQuery({
   args: {},
   returns: v.array(
     v.object({

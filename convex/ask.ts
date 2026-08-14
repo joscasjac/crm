@@ -12,11 +12,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
 import { components, internal } from "./_generated/api";
-import {
-  internalAction,
-  internalQuery,
-  query,
-} from "./_generated/server";
+import { internalAction, internalQuery } from "./_generated/server";
 import type { AiProvider } from "./ai";
 import {
   languageModelFor,
@@ -26,7 +22,7 @@ import {
 import { agentmailConfigured, resendConfigured } from "./email";
 import { logEvent } from "./logs";
 import { insertActivity } from "./model/activities";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
@@ -147,7 +143,7 @@ export const providerInternal = internalQuery({
   },
 });
 
-export const threads = query({
+export const threads = authedQuery({
   args: {},
   returns: v.array(
     v.object({
@@ -174,7 +170,7 @@ export const threads = query({
 
 // Messages plus live stream deltas, so replies render as they generate
 // instead of arriving in one block.
-export const messages = query({
+export const messages = authedQuery({
   args: {
     threadId: v.string(),
     paginationOpts: paginationOptsValidator,

@@ -29,3 +29,27 @@ export async function requireWriteAccess(
   }
   return workspace;
 }
+
+// The read counterpart to requireWriteAccess, and the reason nothing but
+// demo:info and the static-hosting deploy query is exposed unauthenticated.
+// In demo mode every visitor may read, matching the public demo. When Convex
+// Auth is wired (see "Not built yet" in AGENTS.md), turning demo mode off with
+// demo:disableDemoMode makes every gated query require a signed-in session, so
+// a fork with real data never serves the tables to an anonymous caller.
+//
+// Tolerant of the brief unseeded window: before seedPublic runs there is no
+// workspace row, and the app boots by calling the still-public demo:info and
+// then seeding, so an unseeded read is treated as open rather than throwing.
+export async function requireReadAccess(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Doc<"workspace"> | null> {
+  const workspace = await ctx.db.query("workspace").first();
+  if (!workspace || workspace.demoMode) {
+    return workspace;
+  }
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+  return workspace;
+}

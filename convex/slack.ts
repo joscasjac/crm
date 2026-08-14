@@ -2,8 +2,8 @@ import { ActionRetrier } from "@convex-dev/action-retrier";
 import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
-import { action, internalAction, internalQuery, query } from "./_generated/server";
-import { writeMutation } from "./model/functions";
+import { action, internalAction, internalQuery } from "./_generated/server";
+import { authedQuery, writeMutation } from "./model/functions";
 
 // Outbound Slack notifications. Two connection modes, both optional:
 //
@@ -195,6 +195,12 @@ export const sendTest = action({
     if (config.demoMode) {
       throw new Error("Demo mode is on; Slack never posts from the demo.");
     }
+    // Same rule as authedQuery: outside demo mode this needs a session, so an
+    // anonymous caller can never post into the workspace Slack channel.
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
     let text = "Test message from CRM on Convex. Slack is wired up.";
     const base = deepLinkBase();
     if (base) text = `${text}\n<${base}/app|Open in CRM>`;
@@ -222,7 +228,16 @@ export const channels = action({
       isPrivate: v.boolean(),
     }),
   ),
-  handler: async () => {
+  handler: async (ctx) => {
+    // Same rule as authedQuery: open while the public demo runs, session
+    // required otherwise, so channel names never leak to anonymous callers.
+    const config = await ctx.runQuery(internal.slack.getConfigInternal, {});
+    if (!config.demoMode) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Not authenticated");
+      }
+    }
     const botToken = process.env.SLACK_BOT_TOKEN;
     if (!realKey(botToken)) {
       throw new Error(
@@ -273,7 +288,7 @@ export const channels = action({
 });
 
 // Workspace Slack preferences for the Settings card.
-export const settings = query({
+export const settings = authedQuery({
   args: {},
   returns: v.object({
     enabled: v.boolean(),

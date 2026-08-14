@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { authedQuery } from "./model/functions";
 
 type Result = {
   type: "company" | "contact" | "deal";
@@ -11,7 +11,7 @@ type Result = {
 // Command-K search. Full text search indexes on names carry the load at any
 // scale; a small bounded scan backs them up for domain and email matches,
 // which the name indexes cannot see.
-export const global = query({
+export const global = authedQuery({
   args: { q: v.string() },
   returns: v.array(
     v.object({

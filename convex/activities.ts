@@ -1,11 +1,10 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { logEvent } from "./logs";
 import { clip, insertActivity } from "./model/activities";
 import { activityType } from "./schema";
-import { writeMutation } from "./model/functions";
+import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 
 // Attach author display data so the three timeline queries stay identical.
@@ -23,7 +22,7 @@ async function withAuthor(ctx: QueryCtx, rows: Array<Doc<"activities">>) {
   return result;
 }
 
-export const forCompany = query({
+export const forCompany = authedQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     const rows = await ctx.db
@@ -35,7 +34,7 @@ export const forCompany = query({
   },
 });
 
-export const forContact = query({
+export const forContact = authedQuery({
   args: { contactId: v.id("contacts") },
   handler: async (ctx, args) => {
     const rows = await ctx.db
@@ -47,7 +46,7 @@ export const forContact = query({
   },
 });
 
-export const forDeal = query({
+export const forDeal = authedQuery({
   args: { dealId: v.id("deals") },
   handler: async (ctx, args) => {
     const rows = await ctx.db
@@ -60,7 +59,7 @@ export const forDeal = query({
 });
 
 // Open tasks across the workspace, soonest due first.
-export const openTasks = query({
+export const openTasks = authedQuery({
   args: {},
   handler: async (ctx) => {
     const tasks = await ctx.db

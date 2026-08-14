@@ -1,9 +1,9 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { authedQuery } from "./model/functions";
 
 // Team members for owner pickers and avatars. Seeded in demo mode; in a real
 // deployment these come from Convex Auth sign-ins.
-export const list = query({
+export const list = authedQuery({
   args: {},
   returns: v.array(
     v.object({
