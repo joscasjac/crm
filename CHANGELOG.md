@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
-Security review run and its findings fixed. Timestamps: review 2026-08-14 06:40 UTC, fixes 2026-08-14 07:05 UTC.
+Security review run and its findings fixed. Timestamps: review 2026-08-14 06:40 UTC, fixes 2026-08-14 07:05 UTC. DeepSeek and Grok added as provider options 2026-08-14 07:22 UTC.
+
+### Added
+
+- DeepSeek (`deepseek-v4-flash`, `DEEPSEEK_API_KEY`) and Grok (`grok-4.6`, `XAI_API_KEY`) join the AI provider picker via the official `@ai-sdk/deepseek` and `@ai-sdk/xai` packages. OpenAI stays the default. Settings, Ask, Docs, Compare, the landing page, and the README list all five providers; no key ships by default and the chat names the missing key. Community PR #3 proposed this feature and was reviewed (clean diff, official endpoints only) but rejected for flipping the default, adding base URL override env vars, and using xAI's deprecated endpoint with a stale model id; the feature was rebuilt from the current DeepSeek and xAI docs instead (`convex/ai.ts`, `src/app/Settings.tsx`) (2026-08-14)
 
 ### Security
 

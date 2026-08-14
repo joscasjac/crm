@@ -3,9 +3,12 @@
 ## to do
 
 - Security (Medium): when wiring Convex Auth, enforce workspace.allowedSignIn in requireReadAccess and requireWriteAccess, not just at session creation. PRD: prds/security-review-2026-08.md
-- Optional: set real OPENAI_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, RESEND_API_KEY, or AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID on the deployment (CONTEXT_DEV_API_KEY is already real on prod)
+- Consistency: convex/agentTasks.ts checks only OPENAI_API_KEY before agent runs; align it with the workspace provider and the unset sentinel from convex/ai.ts
+- Optional: set real OPENAI_API_KEY, DEEPSEEK_API_KEY, XAI_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, RESEND_API_KEY, or AGENTMAIL_API_KEY + AGENTMAIL_INBOX_ID on the deployment (CONTEXT_DEV_API_KEY is already real on prod)
 
 ## completed
+
+- 2026-08-14 07:22 UTC: Added DeepSeek (deepseek-v4-flash) and Grok (grok-4.6) as AI provider options; OpenAI stays the default. PRD: prds/deepseek-grok-providers.md. Community PR #3 was security reviewed (clean diff, no hidden unicode, official URLs only) but rejected: it flipped the default to DeepSeek, added base URL override env vars, used xAI's deprecated chat completions endpoint, and the stale grok-4.5 model. Implemented instead with the official @ai-sdk/deepseek and @ai-sdk/xai packages reading DEEPSEEK_API_KEY and XAI_API_KEY. Touched convex/ai.ts, schema.ts, prefs.ts, ask.ts, capabilities.ts, Settings.tsx, Ask.tsx, Docs.tsx, Landing.tsx, Compare.tsx, README.md. Verified: convex dev --once, check-types, lint clean. PR #3 closed with a thanks comment.
 
 - 2026-08-14 07:05 UTC: Fixed the security review findings. PRD: prds/security-review-2026-08.md. Added requireReadAccess (convex/model/access.ts) and authedQuery (convex/model/functions.ts), then moved all 39 queries across 18 convex modules off the raw query builder; only demo:info and the static hosting deploy query stay public, each with an intentionally-public comment. slack:sendTest and slack:channels now require a session outside demo mode. npm audit went from 6 vulnerabilities to 0 via an undici ^7.29.0 override in package.json (audit fix was blocked by the upstream zod v3 peer pin in @exalabs/convex-exa). email:generateUploadUrl needed no change; it already sits behind writeMutation. allowedSignIn enforcement stays queued for the Convex Auth wiring. Verified: convex dev --once, check-types, lint, and npm audit all clean, plus a live probe on dev with demo mode temporarily off: every gated query and slack:channels threw "Not authenticated", demo:info stayed public, and demo mode was restored with reads confirmed open again.
 

@@ -160,6 +160,18 @@ function IntegrationsSection() {
             docsId="ai-providers"
           />
           <IntegrationRow
+            name="DeepSeek"
+            detail="Set DEEPSEEK_API_KEY to run chat on DeepSeek."
+            configured={capabilities?.deepseek}
+            docsId="ai-providers"
+          />
+          <IntegrationRow
+            name="Grok (xAI)"
+            detail="Set XAI_API_KEY to run chat on Grok."
+            configured={capabilities?.grok}
+            docsId="ai-providers"
+          />
+          <IntegrationRow
             name="Firecrawl web scraping"
             detail="Set FIRECRAWL_API_KEY so the chat agent can read web pages. Context.dev covers this when only its key is set."
             configured={capabilities?.firecrawl}
@@ -735,12 +747,14 @@ function AiSection() {
         </TextLink>{" "}
         for the setup steps.
       </p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(
           [
             { id: "openai", label: "OpenAI" },
             { id: "anthropic", label: "Claude" },
             { id: "openrouter", label: "OpenRouter" },
+            { id: "deepseek", label: "DeepSeek" },
+            { id: "grok", label: "Grok" },
           ] as const
         ).map((option) => {
           const active = (aiProvider ?? "openai") === option.id;

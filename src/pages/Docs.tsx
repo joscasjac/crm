@@ -16,7 +16,10 @@ const SECTIONS = [
   { id: "email-dns", label: "Email DNS with Cloudflare" },
   { id: "slack", label: "Slack: notifications and the bot" },
   { id: "web-research", label: "Web research: Firecrawl, Exa, Context.dev" },
-  { id: "ai-providers", label: "AI providers: OpenAI, Claude, OpenRouter" },
+  {
+    id: "ai-providers",
+    label: "AI providers: OpenAI, Claude, OpenRouter, DeepSeek, Grok",
+  },
   { id: "auth", label: "Turning on sign-in" },
   { id: "deploy", label: "Deploying to production" },
   { id: "custom-domain", label: "Custom domain with Cloudflare" },
@@ -109,6 +112,18 @@ const ENV_ROWS: Array<{
     required: "No",
     enables: "Chat and agent reasoning when OpenRouter is the selected provider",
     where: "openrouter.ai",
+  },
+  {
+    name: "DEEPSEEK_API_KEY",
+    required: "No",
+    enables: "Chat and agent reasoning when DeepSeek is the selected provider",
+    where: "platform.deepseek.com",
+  },
+  {
+    name: "XAI_API_KEY",
+    required: "No",
+    enables: "Chat and agent reasoning when Grok is the selected provider",
+    where: "console.x.ai",
   },
   {
     name: "RESEND_API_KEY",
@@ -945,18 +960,20 @@ npx convex env set EXA_API_KEY your-key --prod  # production`}</Code>
 
           <Section
             id="ai-providers"
-            title="AI providers: OpenAI, Claude, OpenRouter"
+            title="AI providers: OpenAI, Claude, OpenRouter, DeepSeek, Grok"
           >
             <p>
               The Ask page and record chat run on one model provider at a
-              time, picked in Settings. None of the three keys ship by
+              time, picked in Settings. None of the five keys ship by
               default: a fresh fork has no AI keys at all, and the chat
               answers with the exact key it needs instead of erroring. Set
               whichever one you use:
             </p>
             <Code>{`npx convex env set OPENAI_API_KEY sk-...
 npx convex env set ANTHROPIC_API_KEY sk-ant-...
-npx convex env set OPENROUTER_API_KEY sk-or-...`}</Code>
+npx convex env set OPENROUTER_API_KEY sk-or-...
+npx convex env set DEEPSEEK_API_KEY sk-...
+npx convex env set XAI_API_KEY xai-...`}</Code>
             <p>
               Production keeps separate variables, so run the same command
               with <K>--prod</K> when you deploy:
@@ -985,10 +1002,24 @@ npx convex env set OPENROUTER_API_KEY sk-or-...`}</Code>
                 fronts many models with one key. It speaks the OpenAI wire
                 format, so no extra dependency was needed.
               </li>
+              <li>
+                <span className="text-white">DeepSeek</span> runs{" "}
+                <K>deepseek-v4-flash</K> through the official AI SDK provider.
+                Get a key at{" "}
+                <Ext href="https://platform.deepseek.com">
+                  platform.deepseek.com
+                </Ext>
+                .
+              </li>
+              <li>
+                <span className="text-white">Grok</span> runs <K>grok-4.6</K>{" "}
+                through xAI's API via the official AI SDK provider. Get a key
+                at <Ext href="https://console.x.ai">console.x.ai</Ext>.
+              </li>
             </ul>
             <p>
               Switching providers in Settings takes effect on the next
-              message. You can keep keys for all three set and flip freely.
+              message. You can keep keys for all five set and flip freely.
             </p>
           </Section>
 

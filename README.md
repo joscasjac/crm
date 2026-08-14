@@ -36,7 +36,7 @@ Try it at [convex.link/crmonconvex](https://convex.link/crmonconvex) (served fro
 | Brand enrichment | [`@context-dot-dev/convex`](https://www.convex.dev/components/context-dot-dev/convex), the same Context.dev data the upstream uses; the same key also backs web search and scraping |
 | Web scraping     | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex) or Context.dev, the chat agent reads pages as markdown with either key                |
 | Web search       | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa) or Context.dev, search as an agent tool with either key                                               |
-| AI providers     | OpenAI, Claude (Anthropic), or OpenRouter via the AI SDK, switchable in Settings, no key ships by default                                                                           |
+| AI providers     | OpenAI, Claude (Anthropic), OpenRouter, DeepSeek, or Grok (xAI) via the AI SDK, switchable in Settings, no key ships by default                                                     |
 | Email            | [`@convex-dev/resend`](https://www.convex.dev/components/resend) or [`@agentmail/convex`](https://www.convex.dev/components/agentmail/convex), switchable in Settings               |
 | Caching          | [`@convex-dev/action-cache`](https://www.convex.dev/components/action-cache), 7 day TTL on brand lookups, replaces Redis                                                            |
 | Rate limiting    | [`@convex-dev/rate-limiter`](https://www.convex.dev/components/rate-limiter) on the enrichment budget                                                                               |
@@ -92,6 +92,8 @@ Every outside key is optional in practice. The app degrades honestly: features t
 | `OPENAI_API_KEY`                           | Chat and agent reasoning when OpenAI is the selected provider                                                                                | Chat replies name the missing key                                                      |
 | `ANTHROPIC_API_KEY`                        | Chat and agent reasoning when Claude is the selected provider                                                                                | Same                                                                                   |
 | `OPENROUTER_API_KEY`                       | Chat and agent reasoning when OpenRouter is the selected provider                                                                            | Same                                                                                   |
+| `DEEPSEEK_API_KEY`                         | Chat and agent reasoning when DeepSeek is the selected provider                                                                              | Same                                                                                   |
+| `XAI_API_KEY`                              | Chat and agent reasoning when Grok (xAI) is the selected provider                                                                            | Same                                                                                   |
 | `RESEND_API_KEY`                           | Outbound email through the Resend component                                                                                                  | Email sends are logged as no-ops                                                       |
 | `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID` | Outbound email plus a persistent agent inbox through AgentMail                                                                               | Same, logged as no-ops                                                                 |
 | `SLACK_WEBHOOK_URL`                        | Slack notifications in simple mode: posts to one fixed channel through an incoming webhook                                                   | Slack sends are logged as no-ops                                                       |
@@ -107,7 +109,7 @@ Set any of them with:
 npx convex env set OPENAI_API_KEY sk-...
 ```
 
-None of the three AI keys ship by default. A fresh fork has no model keys at all; the Ask page and record chat answer with the exact key they need instead of erroring. Pick which provider the chat uses in Settings.
+None of the five AI keys ship by default. A fresh fork has no model keys at all; the Ask page and record chat answer with the exact key they need instead of erroring. Pick which provider the chat uses in Settings. OpenAI is the default.
 
 Demo mode is a flag on the workspace row, set by the seed. While it is on, writes are open, sign-in is disabled, and the reset cron wipes and reseeds all tables every 10 minutes. The banner in the app counts down to the next reset. Forking this for real use? Turn it off first: see [Turning off the demo reset](#turning-off-the-demo-reset).
 
@@ -206,7 +208,7 @@ I forked waynesutton/trycrm-convex and I am using it as a real CRM, not a public
 - Agent task queue with leasing, workpools, and scheduled rechecks that require a reason
 - Agents that build agents: describe a process, get a versioned draft definition
 - Record chat with web research tools (Firecrawl, Exa, or Context.dev, any one key is enough) that answer honestly about missing keys
-- AI provider picker: OpenAI, Claude, or OpenRouter, none configured by default
+- AI provider picker: OpenAI, Claude, OpenRouter, DeepSeek, or Grok, none configured by default
 - Dark and light themes with a toggle in the header and the sidebar footer
 - Demo reset every 10 minutes via cron (the Activity log resets with it)
 
@@ -225,7 +227,7 @@ The app has a live comparison page at `/compare` and full setup docs at `/docs`.
 | Auth            | Better Auth                             | Convex Auth ready, off in demo                                                                    |
 | Email           | Resend SDK calls                        | Resend or AgentMail components, switchable                                                        |
 | Web research    | Not included                            | Firecrawl or Context.dev scraping and Exa or Context.dev search as agent tools; any one key works |
-| AI providers    | OpenAI                                  | OpenAI, Claude, or OpenRouter, switchable in Settings                                             |
+| AI providers    | OpenAI                                  | OpenAI, Claude, OpenRouter, DeepSeek, or Grok, switchable in Settings                             |
 | Workspace chat  | Per-record chat only                    | Ask page with streamed replies, slash commands, and thread history                                |
 | Notes and tasks | Notes on records                        | Notes and tasks with due dates, reminders, and completion                                         |
 | Search          | Per-table inputs                        | Command-K palette on full text search indexes                                                     |

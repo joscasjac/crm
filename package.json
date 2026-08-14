@@ -18,7 +18,9 @@
   "dependencies": {
     "@agentmail/convex": "^0.1.0",
     "@ai-sdk/anthropic": "^3.0.107",
+    "@ai-sdk/deepseek": "^2.0.55",
     "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/xai": "^3.0.121",
     "@context-dot-dev/convex": "latest",
     "@convex-dev/action-cache": "latest",
     "@convex-dev/action-retrier": "latest",

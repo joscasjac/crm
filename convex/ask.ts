@@ -136,6 +136,8 @@ export const providerInternal = internalQuery({
     v.literal("openai"),
     v.literal("anthropic"),
     v.literal("openrouter"),
+    v.literal("deepseek"),
+    v.literal("grok"),
   ),
   handler: async (ctx) => {
     const workspace = await ctx.db.query("workspace").first();

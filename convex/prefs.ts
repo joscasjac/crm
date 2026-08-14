@@ -8,6 +8,8 @@ const aiProviderValidator = v.union(
   v.literal("openai"),
   v.literal("anthropic"),
   v.literal("openrouter"),
+  v.literal("deepseek"),
+  v.literal("grok"),
 );
 
 export const sidebar = authedQuery({

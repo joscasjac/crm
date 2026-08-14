@@ -208,6 +208,18 @@ function BuiltWith() {
             aria-label="OpenRouter">
             OpenRouter
           </a>
+          <a
+            href="https://platform.deepseek.com"
+            className="text-sm font-semibold text-white opacity-80 transition-opacity hover:opacity-100"
+            aria-label="DeepSeek">
+            DeepSeek
+          </a>
+          <a
+            href="https://x.ai"
+            className="text-sm font-semibold text-white opacity-80 transition-opacity hover:opacity-100"
+            aria-label="Grok">
+            Grok
+          </a>
           <span className="text-xs text-neutral-600">bring your own key for any of these</span>
         </div>
       </div>
@@ -572,6 +584,8 @@ function MockByok() {
         { name: "OpenAI", envKey: "OPENAI_API_KEY" },
         { name: "Claude", envKey: "ANTHROPIC_API_KEY" },
         { name: "OpenRouter", envKey: "OPENROUTER_API_KEY" },
+        { name: "DeepSeek", envKey: "DEEPSEEK_API_KEY" },
+        { name: "Grok", envKey: "XAI_API_KEY" },
       ],
     },
     {
@@ -788,7 +802,7 @@ function DemoNotes() {
       key: "providers",
       body: (
         <>
-          Chat runs on OpenAI, Claude, or OpenRouter. None of those keys ship by default;{" "}
+          Chat runs on OpenAI, Claude, OpenRouter, DeepSeek, or Grok. None of those keys ship by default;{" "}
           <Hl>pick a provider in Settings</Hl> and set its key on your own deployment.{" "}
           <DocsLink to="/docs#ai-providers" label="AI providers" />
         </>
