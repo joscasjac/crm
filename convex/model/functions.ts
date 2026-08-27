@@ -4,16 +4,19 @@ import {
   customQuery,
 } from "convex-helpers/server/customFunctions";
 import { mutation, query } from "../_generated/server";
-import { requireReadAccess, requireWriteAccess } from "./access";
+import { requireAccessContext } from "./access";
 
 // Convex's alternative to row level security: every write goes through this
-// wrapper, which runs the access check before the handler. When Convex Auth
-// is wired, requireWriteAccess is the only place that needs to change.
+// wrapper, which runs the access check before the handler and gives callers
+// the resulting workspace and actor context.
 export const writeMutation = customMutation(
   mutation,
   customCtx(async (ctx) => {
-    await requireWriteAccess(ctx);
-    return {};
+    const access = await requireAccessContext(ctx, "write");
+    if (!access.workspace) {
+      throw new Error("Workspace not seeded yet. Run demo:seedPublic.");
+    }
+    return { access, workspace: access.workspace };
   }),
 );
 
@@ -24,7 +27,7 @@ export const writeMutation = customMutation(
 export const authedQuery = customQuery(
   query,
   customCtx(async (ctx) => {
-    await requireReadAccess(ctx);
-    return {};
+    const access = await requireAccessContext(ctx, "read");
+    return { access, workspace: access.workspace };
   }),
 );

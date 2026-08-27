@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { logEvent } from "./logs";
+import { currentUserId } from "./model/access";
 import { authedQuery, writeMutation } from "./model/functions";
 import { projectStatus, taskPriority, taskStatus } from "./schema";
 
@@ -79,17 +80,6 @@ export const names = authedQuery({
     return projects.map((project) => ({ _id: project._id, name: project.name }));
   },
 });
-
-async function currentUserId(ctx: MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  const email = identity?.email?.trim().toLowerCase();
-  if (!email) return undefined;
-  const user = await ctx.db
-    .query("users")
-    .withIndex("email", (q) => q.eq("email", email))
-    .unique();
-  return user?._id;
-}
 
 async function enrichProject(
   ctx: QueryCtx | MutationCtx,

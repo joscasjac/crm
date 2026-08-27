@@ -10,6 +10,7 @@ import {
 } from "./_generated/server";
 import { STAGES } from "./deals";
 import { logEvent } from "./logs";
+import { workspaceActorByEmail } from "./model/access";
 import { clip, insertActivity } from "./model/activities";
 import { changeDealStage } from "./model/deals";
 import { capMessage, slackSigningConfigured } from "./slack";
@@ -189,48 +190,40 @@ export const verifyIdentity = internalMutation({
   },
   returns: v.union(v.object({ name: v.string() }), v.null()),
   handler: async (ctx, args) => {
-    const email = args.email.toLowerCase();
-    const member = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", email))
-      .unique();
-    let allowed = !!member;
-    if (!allowed) {
-      const workspace = await ctx.db.query("workspace").first();
-      const domain = workspace?.slackAllowedEmailDomain?.toLowerCase();
-      if (domain && email.endsWith(`@${domain.replace(/^@/, "")}`)) {
-        allowed = true;
-      }
-    }
-    if (!allowed) {
+    const workspace = await ctx.db.query("workspace").first();
+    const actor = await workspaceActorByEmail(ctx, {
+      email: args.email,
+      fallbackName: args.name,
+      allowedEmailDomain: workspace?.slackAllowedEmailDomain,
+    });
+    if (!actor) {
       await logEvent(ctx, {
         kind: "A",
         fn: "slackBot:verifyIdentity",
         status: "info",
-        message: `Slack user ${args.name} (${email}) tried the /crm bot and is not a workspace member`,
+        message: `Slack user ${args.name} (${args.email.toLowerCase()}) tried the /crm bot and is not a workspace member`,
       });
       return null;
     }
-    const name = member?.name ?? args.name;
     const existing = await ctx.db
       .query("slackIdentities")
       .withIndex("by_slackUserId", (q) => q.eq("slackUserId", args.slackUserId))
       .unique();
     if (existing) {
       await ctx.db.patch("slackIdentities", existing._id, {
-        email,
-        name,
+        email: actor.email,
+        name: actor.name,
         verifiedAt: Date.now(),
       });
     } else {
       await ctx.db.insert("slackIdentities", {
         slackUserId: args.slackUserId,
-        email,
-        name,
+        email: actor.email,
+        name: actor.name,
         verifiedAt: Date.now(),
       });
     }
-    return { name };
+    return { name: actor.name };
   },
 });
 

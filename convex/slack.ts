@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
 import { action, internalAction, internalQuery } from "./_generated/server";
+import { requireActionAccess } from "./model/access";
 import { authedQuery, writeMutation } from "./model/functions";
 
 // Outbound Slack notifications. Two connection modes, both optional:
@@ -192,15 +193,10 @@ export const sendTest = action({
   returns: v.null(),
   handler: async (ctx) => {
     const config = await ctx.runQuery(internal.slack.getConfigInternal, {});
-    if (config.demoMode) {
-      throw new Error("Demo mode is on; Slack never posts from the demo.");
-    }
-    // Same rule as authedQuery: outside demo mode this needs a session, so an
-    // anonymous caller can never post into the workspace Slack channel.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireActionAccess(ctx, config, {
+      allowDemo: false,
+      demoMessage: "Demo mode is on; Slack never posts from the demo.",
+    });
     let text = "Test message from CRM on Convex. Slack is wired up.";
     const base = deepLinkBase();
     if (base) text = `${text}\n<${base}/app|Open in CRM>`;
@@ -232,12 +228,7 @@ export const channels = action({
     // Same rule as authedQuery: open while the public demo runs, session
     // required otherwise, so channel names never leak to anonymous callers.
     const config = await ctx.runQuery(internal.slack.getConfigInternal, {});
-    if (!config.demoMode) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        throw new Error("Not authenticated");
-      }
-    }
+    await requireActionAccess(ctx, config, { allowDemo: true });
     const botToken = process.env.SLACK_BOT_TOKEN;
     if (!realKey(botToken)) {
       throw new Error(

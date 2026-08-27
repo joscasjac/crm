@@ -1,5 +1,6 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
+import { isEmailAllowedForSignIn } from "./model/access";
 
 function normalizeEmail(value: unknown): string {
   if (typeof value !== "string") {
@@ -38,13 +39,8 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const user = await ctx.db.get("users", userId);
       const workspace = await ctx.db.query("workspace").first();
       const email = user?.email?.trim().toLowerCase();
-      const allowed = new Set(
-        (workspace?.allowedSignIn ?? []).map((value: string) =>
-          value.trim().toLowerCase(),
-        ),
-      );
 
-      if (!email || !allowed.has(email)) {
+      if (!isEmailAllowedForSignIn(workspace, email)) {
         throw new Error("This email is not allowed to sign in.");
       }
     },
