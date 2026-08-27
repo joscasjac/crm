@@ -1,3 +1,4 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -21,11 +22,54 @@ export const activityType = v.union(
   v.literal("ENRICHMENT"),
 );
 
+export const projectStatus = v.union(
+  v.literal("planned"),
+  v.literal("active"),
+  v.literal("on_hold"),
+  v.literal("completed"),
+  v.literal("archived"),
+);
+
+export const taskStatus = v.union(
+  v.literal("backlog"),
+  v.literal("todo"),
+  v.literal("in_progress"),
+  v.literal("blocked"),
+  v.literal("done"),
+  v.literal("canceled"),
+);
+
+export const taskPriority = v.union(
+  v.literal("low"),
+  v.literal("medium"),
+  v.literal("high"),
+  v.literal("urgent"),
+);
+
 export const enrichmentStatus = v.union(
   v.literal("NONE"),
   v.literal("RESEARCHING"),
   v.literal("ENRICHED"),
   v.literal("FAILED"),
+);
+
+export const fieldType = v.union(
+  v.literal("text"),
+  v.literal("number"),
+  v.literal("boolean"),
+  v.literal("dateTime"),
+  v.literal("date"),
+  v.literal("select"),
+  v.literal("multiSelect"),
+  v.literal("rating"),
+  v.literal("files"),
+  v.literal("currency"),
+  v.literal("email"),
+  v.literal("link"),
+  v.literal("phone"),
+  v.literal("fullName"),
+  v.literal("address"),
+  v.literal("richText"),
 );
 
 // Evidence bands from the upstream evidence ledger. Strong evidence writes to
@@ -38,6 +82,8 @@ export const evidenceBand = v.union(
 );
 
 export default defineSchema({
+  ...authTables,
+
   // Single tenant, on purpose. One row.
   workspace: defineTable({
     name: v.string(),
@@ -100,7 +146,14 @@ export default defineSchema({
     email: v.string(),
     role: v.union(v.literal("owner"), v.literal("member")),
     avatarUrl: v.optional(v.string()),
-  }).index("by_email", ["email"]),
+    image: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+  })
+    .index("email", ["email"])
+    .index("phone", ["phone"]),
 
   companies: defineTable({
     name: v.string(),
@@ -112,8 +165,11 @@ export default defineSchema({
     primaryContactId: v.optional(v.id("contacts")),
     enrichmentStatus: enrichmentStatus,
     lastActivityAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_domain", ["domain"])
+    .index("by_primaryContactId", ["primaryContactId"])
+    .index("by_deletedAt_and_name", ["deletedAt", "name"])
     .index("by_name", ["name"])
     .searchIndex("search_name", { searchField: "name" }),
 
@@ -125,9 +181,11 @@ export default defineSchema({
     ownerId: v.optional(v.id("users")),
     avatarUrl: v.optional(v.string()),
     lastActivityAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_company", ["companyId"])
     .index("by_email", ["email"])
+    .index("by_deletedAt", ["deletedAt"])
     .searchIndex("search_name", { searchField: "name" }),
 
   deals: defineTable({
@@ -141,11 +199,49 @@ export default defineSchema({
     primaryContactId: v.optional(v.id("contacts")),
     expectedCloseAt: v.optional(v.number()),
     closedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_company", ["companyId"])
+    .index("by_primaryContactId", ["primaryContactId"])
     .index("by_stage", ["stage"])
+    .index("by_deletedAt_and_stage", ["deletedAt", "stage"])
+    .index("by_deletedAt", ["deletedAt"])
     .index("by_owner", ["ownerId"])
     .searchIndex("search_name", { searchField: "name" }),
+
+  favorites: defineTable({
+    label: v.string(),
+    href: v.string(),
+    kind: v.union(
+      v.literal("route"),
+      v.literal("record"),
+      v.literal("view"),
+    ),
+    entityType: v.optional(
+      v.union(
+        v.literal("company"),
+        v.literal("contact"),
+        v.literal("deal"),
+        v.literal("project"),
+        v.literal("task"),
+        v.literal("note"),
+      ),
+    ),
+    entityId: v.optional(v.string()),
+    position: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_position", ["position"])
+    .index("by_href", ["href"]),
+
+  savedViews: defineTable({
+    entity: v.string(),
+    name: v.string(),
+    href: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_entity", ["entity"])
+    .index("by_href", ["href"]),
 
   // Timeline entries for companies, contacts, and deals.
   activities: defineTable({
@@ -171,6 +267,161 @@ export default defineSchema({
     .index("by_deal", ["dealId"])
     .index("by_type", ["type"]),
 
+  projects: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    status: projectStatus,
+    ownerId: v.optional(v.id("users")),
+    companyId: v.optional(v.id("companies")),
+    contactId: v.optional(v.id("contacts")),
+    dealId: v.optional(v.id("deals")),
+    startAt: v.optional(v.number()),
+    dueAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_owner", ["ownerId"])
+    .index("by_company", ["companyId"])
+    .index("by_contact", ["contactId"])
+    .index("by_deal", ["dealId"])
+    .index("by_dueAt", ["dueAt"])
+    .searchIndex("search_name", { searchField: "name" }),
+
+  projectTasks: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    status: taskStatus,
+    priority: taskPriority,
+    projectId: v.optional(v.id("projects")),
+    parentTaskId: v.optional(v.id("projectTasks")),
+    assigneeId: v.optional(v.id("users")),
+    assigneeIds: v.optional(v.array(v.id("users"))),
+    companyId: v.optional(v.id("companies")),
+    contactId: v.optional(v.id("contacts")),
+    dealId: v.optional(v.id("deals")),
+    dueAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    position: v.number(),
+  })
+    .index("by_status_and_dueAt", ["status", "dueAt"])
+    .index("by_project_and_status", ["projectId", "status"])
+    .index("by_assignee_and_status", ["assigneeId", "status"])
+    .index("by_parent", ["parentTaskId"])
+    .index("by_company", ["companyId"])
+    .index("by_contact", ["contactId"])
+    .index("by_deal", ["dealId"])
+    .index("by_dueAt", ["dueAt"])
+    .searchIndex("search_title", { searchField: "title" }),
+
+  taskComments: defineTable({
+    taskId: v.id("projectTasks"),
+    authorId: v.optional(v.id("users")),
+    body: v.string(),
+  }).index("by_task", ["taskId"]),
+
+  taskAttachments: defineTable({
+    taskId: v.id("projectTasks"),
+    storageId: v.id("_storage"),
+    name: v.string(),
+    contentType: v.optional(v.string()),
+    size: v.optional(v.number()),
+    uploadedById: v.optional(v.id("users")),
+    uploadedAt: v.number(),
+  }).index("by_task", ["taskId"]),
+
+  customObjects: defineTable({
+    key: v.string(),
+    singularLabel: v.string(),
+    pluralLabel: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_key", ["key"])
+    .index("by_archivedAt_and_position", ["archivedAt", "position"]),
+
+  customObjectFields: defineTable({
+    objectId: v.id("customObjects"),
+    key: v.string(),
+    label: v.string(),
+    type: fieldType,
+    options: v.optional(v.array(v.string())),
+    order: v.number(),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_object_and_key", ["objectId", "key"])
+    .index("by_object_and_archivedAt_and_order", [
+      "objectId",
+      "archivedAt",
+      "order",
+    ]),
+
+  customObjectRecords: defineTable({
+    objectId: v.id("customObjects"),
+    title: v.string(),
+    values: v.record(v.string(), v.string()),
+    createdById: v.optional(v.id("users")),
+    updatedAt: v.number(),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_object_and_archivedAt_and_title", [
+      "objectId",
+      "archivedAt",
+      "title",
+    ])
+    .index("by_object_and_archivedAt_and_updatedAt", [
+      "objectId",
+      "archivedAt",
+      "updatedAt",
+    ]),
+
+  customObjectRelationshipDefinitions: defineTable({
+    sourceObjectId: v.id("customObjects"),
+    key: v.string(),
+    label: v.string(),
+    targetKind: v.union(
+      v.literal("company"),
+      v.literal("contact"),
+      v.literal("deal"),
+      v.literal("project"),
+      v.literal("task"),
+      v.literal("note"),
+      v.literal("custom"),
+    ),
+    targetObjectId: v.optional(v.id("customObjects")),
+    many: v.boolean(),
+    order: v.number(),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_source_and_key", ["sourceObjectId", "key"])
+    .index("by_source_and_archivedAt_and_order", [
+      "sourceObjectId",
+      "archivedAt",
+      "order",
+    ]),
+
+  customObjectRelationships: defineTable({
+    relationshipId: v.id("customObjectRelationshipDefinitions"),
+    sourceRecordId: v.id("customObjectRecords"),
+    targetKind: v.union(
+      v.literal("company"),
+      v.literal("contact"),
+      v.literal("deal"),
+      v.literal("project"),
+      v.literal("task"),
+      v.literal("note"),
+      v.literal("custom"),
+    ),
+    targetObjectId: v.optional(v.id("customObjects")),
+    targetEntityId: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_sourceRecord_and_relationship", [
+      "sourceRecordId",
+      "relationshipId",
+    ])
+    .index("by_target", ["targetKind", "targetEntityId"]),
+
   // Custom fields per entity, with an agentFilled flag and an agentBrief that
   // tells the agent what to put in a field.
   fieldDefinitions: defineTable({
@@ -178,15 +429,12 @@ export default defineSchema({
       v.literal("company"),
       v.literal("contact"),
       v.literal("deal"),
+      v.literal("project"),
+      v.literal("task"),
     ),
     key: v.string(),
     label: v.string(),
-    type: v.union(
-      v.literal("text"),
-      v.literal("number"),
-      v.literal("select"),
-      v.literal("date"),
-    ),
+    type: fieldType,
     options: v.optional(v.array(v.string())),
     order: v.number(),
     archived: v.boolean(),
@@ -203,6 +451,8 @@ export default defineSchema({
       v.literal("company"),
       v.literal("contact"),
       v.literal("deal"),
+      v.literal("project"),
+      v.literal("task"),
     ),
     columns: v.array(
       v.object({
@@ -347,6 +597,26 @@ export default defineSchema({
       v.literal("rejected"),
     ),
   }).index("by_entityId", ["entityId"]),
+
+  // Local Codex and other agent clients authenticate to the narrow CRM tool
+  // gateway with bearer tokens. Store only the hash; the plain token is shown
+  // once when created from Settings.
+  codexApiTokens: defineTable({
+    name: v.string(),
+    tokenHash: v.string(),
+    lastFour: v.string(),
+    scopes: v.array(
+      v.union(
+        v.literal("read"),
+        v.literal("write_notes"),
+        v.literal("write_tasks"),
+        v.literal("write_deals"),
+      ),
+    ),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  }).index("by_tokenHash", ["tokenHash"]),
 
   // Workspace-wide Ask chats, mapped to Agent component threads. Unlike
   // chatThreads these are not tied to a record: archive and delete are

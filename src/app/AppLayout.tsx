@@ -1,35 +1,54 @@
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { CommandK } from "../components/CommandK";
-import { DemoBanner } from "../components/DemoBanner";
+import { ComposeEmail } from "../components/ComposeEmail";
+import { SignInScreen } from "../components/SignInScreen";
 import { ShortcutsModal } from "../components/ShortcutsModal";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { Button, Panel } from "../components/ui";
+import { TaskForm } from "./Tasks";
 
 // Every nav item has a stable id; order and visibility live on the
 // workspace row so they sync across tabs and reset with the demo.
 export const NAV_ITEMS = [
-  { id: "dashboard", to: "/app", label: "Dashboard", end: true },
+  { id: "home", to: "/app", label: "Home", end: true },
+  { id: "timeline", to: "/app/timeline", label: "Timeline" },
+  { id: "tasks", to: "/app/tasks", label: "Tasks" },
+  { id: "notes", to: "/app/notes", label: "Notes" },
   { id: "companies", to: "/app/companies", label: "Companies" },
   { id: "contacts", to: "/app/contacts", label: "Contacts" },
   { id: "deals", to: "/app/deals", label: "Deals" },
-  { id: "ask", to: "/app/ask", label: "Ask" },
-  { id: "agents", to: "/app/agents", label: "Agents" },
-  { id: "activity", to: "/app/activity", label: "Activity" },
+  { id: "projects", to: "/app/projects", label: "Projects" },
+  { id: "trash", to: "/app/trash", label: "Trash" },
 ] as const;
 
 // The CRM shell: demo banner on top, sidebar on the left, routed content on
 // the right. Seeds the workspace on first visit so the demo is never empty.
 export function AppLayout() {
   const info = useQuery(api.demo.info);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signOut } = useAuthActions();
   const seed = useMutation(api.demo.seedPublic);
-  const prefs = useQuery(api.prefs.sidebar);
+  const requiresSignIn = info?.demoMode === false && !isAuthenticated;
+  const canLoadPrefs =
+    info !== undefined && (info?.demoMode !== false || isAuthenticated);
+  const prefs = useQuery(api.prefs.sidebar, canLoadPrefs ? {} : "skip");
+  const favorites = useQuery(api.favorites.list, canLoadPrefs ? {} : "skip");
+  const customObjects = useQuery(
+    api.customObjects.list,
+    canLoadPrefs ? {} : "skip",
+  );
   const setOrder = useMutation(api.prefs.setSidebarOrder);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [quickTaskOpen, setQuickTaskOpen] = useState(false);
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [quickEmailOpen, setQuickEmailOpen] = useState(false);
   // Attio-style rail toggle; the preference sticks per browser.
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("crm-sidebar-collapsed") === "1",
@@ -78,6 +97,18 @@ export function AppLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileNavOpen]);
 
+  if (info === undefined || (info?.demoMode === false && isLoading)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ink text-sm text-neutral-500">
+        Loading workspace...
+      </main>
+    );
+  }
+
+  if (requiresSignIn) {
+    return <SignInScreen />;
+  }
+
   // Apply saved order, append anything new, drop hidden items.
   const savedOrder = prefs?.order;
   const hidden = new Set(prefs?.hidden ?? []);
@@ -90,6 +121,8 @@ export function AppLayout() {
       ]
     : [...NAV_ITEMS];
   const visible = ordered.filter((item) => !hidden.has(item.id));
+  const visibleMain = visible.filter((item) => item.id !== "timeline");
+  const showTimeline = !hidden.has("timeline");
 
   const dropOn = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
@@ -103,22 +136,30 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-ink">
-      <DemoBanner />
       <CommandK open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ShortcutsModal
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
       />
+      <ComposeEmail
+        open={quickEmailOpen}
+        onClose={() => setQuickEmailOpen(false)}
+      />
+      <QuickTaskModal
+        open={quickTaskOpen}
+        onClose={() => setQuickTaskOpen(false)}
+      />
+      <QuickNoteModal
+        open={quickNoteOpen}
+        onClose={() => setQuickNoteOpen(false)}
+      />
       {/* Mobile top bar: logo, search, and the drawer trigger. */}
       <div className="flex items-center justify-between border-b border-edge bg-ink px-4 py-3 md:hidden">
         <Link
-          to="/"
+          to="/app"
           className="flex items-baseline gap-1.5 text-sm font-semibold text-white"
         >
           CRM on Convex
-          <span className="rounded border border-edge px-1 py-px text-[9px] font-medium uppercase tracking-wide text-neutral-500">
-            demo
-          </span>
         </Link>
         <div className="flex items-center gap-1">
           <button
@@ -156,7 +197,43 @@ export function AppLayout() {
               </button>
             </div>
             <nav className="flex flex-col gap-0.5 overflow-y-auto p-2">
-              {visible.map((item) => (
+              <QuickActions
+                onTask={() => {
+                  setQuickTaskOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                onNote={() => {
+                  setQuickNoteOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                onEmail={() => {
+                  setQuickEmailOpen(true);
+                  setMobileNavOpen(false);
+                }}
+              />
+              {favorites && favorites.length > 0 ? (
+                <MobileNavGroup
+                  title="Favorites"
+                  items={favorites.map((item) => ({
+                    id: item._id,
+                    to: item.href,
+                    label: item.label,
+                  }))}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+              ) : null}
+              {customObjects && customObjects.length > 0 ? (
+                <MobileNavGroup
+                  title="Custom objects"
+                  items={customObjects.map((item) => ({
+                    id: item._id,
+                    to: `/app/objects/${item.key}`,
+                    label: item.pluralLabel,
+                  }))}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+              ) : null}
+              {visibleMain.map((item) => (
                 <NavLink
                   key={item.id}
                   to={item.to}
@@ -173,6 +250,21 @@ export function AppLayout() {
                   {item.label}
                 </NavLink>
               ))}
+              {showTimeline ? (
+                <NavLink
+                  to="/app/timeline"
+                  onClick={() => setMobileNavOpen(false)}
+                  className={({ isActive }) =>
+                    `rounded-md px-3 py-2 text-sm transition-colors ${
+                      isActive
+                        ? "bg-raised text-white"
+                        : "text-neutral-400 hover:bg-panel hover:text-white"
+                    }`
+                  }
+                >
+                  Timeline
+                </NavLink>
+              ) : null}
               <NavLink
                 to="/app/settings"
                 onClick={() => setMobileNavOpen(false)}
@@ -186,13 +278,6 @@ export function AppLayout() {
               >
                 Settings
               </NavLink>
-              <Link
-                to="/docs"
-                onClick={() => setMobileNavOpen(false)}
-                className="rounded-md px-3 py-2 text-sm text-neutral-400 transition-colors hover:bg-panel hover:text-white"
-              >
-                Docs
-              </Link>
             </nav>
             <div className="mt-auto border-t border-edge p-4">
               <div className="flex items-center justify-between gap-2">
@@ -233,13 +318,10 @@ export function AppLayout() {
         >
           <div className="flex items-center justify-between border-b border-edge px-4 py-4">
             <Link
-              to="/"
+              to="/app"
               className="flex items-baseline gap-1.5 text-sm font-semibold text-white"
             >
               CRM on Convex
-              <span className="rounded border border-edge px-1 py-px text-[9px] font-medium uppercase tracking-wide text-neutral-500">
-                demo
-              </span>
             </Link>
             <button
               onClick={toggleSidebar}
@@ -259,8 +341,33 @@ export function AppLayout() {
               ⌘K
             </kbd>
           </button>
+          <QuickActions
+            onTask={() => setQuickTaskOpen(true)}
+            onNote={() => setQuickNoteOpen(true)}
+            onEmail={() => setQuickEmailOpen(true)}
+          />
           <nav className="flex flex-col gap-0.5 p-2">
-            {visible.map((item) => (
+            {favorites && favorites.length > 0 ? (
+              <SidebarGroup
+                title="Favorites"
+                items={favorites.map((item) => ({
+                  id: item._id,
+                  to: item.href,
+                  label: item.label,
+                }))}
+              />
+            ) : null}
+            {customObjects && customObjects.length > 0 ? (
+              <SidebarGroup
+                title="Custom objects"
+                items={customObjects.map((item) => ({
+                  id: item._id,
+                  to: `/app/objects/${item.key}`,
+                  label: item.pluralLabel,
+                }))}
+              />
+            ) : null}
+            {visibleMain.map((item) => (
               <NavLink
                 key={item.id}
                 to={item.to}
@@ -283,6 +390,20 @@ export function AppLayout() {
                 {item.label}
               </NavLink>
             ))}
+            {showTimeline ? (
+              <NavLink
+                to="/app/timeline"
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-raised text-white"
+                      : "text-neutral-400 hover:bg-panel hover:text-white"
+                  }`
+                }
+              >
+                Timeline
+              </NavLink>
+            ) : null}
             <NavLink
               to="/app/settings"
               className={({ isActive }) =>
@@ -295,12 +416,6 @@ export function AppLayout() {
             >
               Settings
             </NavLink>
-            <Link
-              to="/docs"
-              className="rounded-md px-3 py-1.5 text-sm text-neutral-400 transition-colors hover:bg-panel hover:text-white"
-            >
-              Docs
-            </Link>
           </nav>
           <p className="px-4 pt-1 text-[10px] text-neutral-600">
             Drag items to reorder. Hide them in Settings.
@@ -326,6 +441,14 @@ export function AppLayout() {
                 </a>
               </div>
               <div className="flex items-center gap-2">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => void signOut()}
+                    className="text-[11px] text-neutral-500 transition-colors hover:text-neutral-300"
+                  >
+                    Sign out
+                  </button>
+                ) : null}
                 <button
                   onClick={() => setShortcutsOpen(true)}
                   title="Keyboard shortcuts (⌘?)"
@@ -342,6 +465,191 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+    </div>
+  );
+}
+
+function SidebarGroup({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ id: string; to: string; label: string }>;
+}) {
+  return (
+    <div className="mb-2">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-medium uppercase text-neutral-600">
+        {title}
+      </p>
+      <div className="flex flex-col gap-0.5">
+        {items.slice(0, 8).map((item) => (
+          <NavLink
+            key={item.id}
+            to={item.to}
+            className={({ isActive }) =>
+              `truncate rounded-md px-3 py-1.5 text-sm transition-colors ${
+                isActive
+                  ? "bg-raised text-white"
+                  : "text-neutral-400 hover:bg-panel hover:text-white"
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuickActions({
+  onTask,
+  onNote,
+  onEmail,
+}: {
+  onTask: () => void;
+  onNote: () => void;
+  onEmail: () => void;
+}) {
+  return (
+    <div className="mx-2 mt-2 grid grid-cols-3 gap-1">
+      <button
+        type="button"
+        onClick={onTask}
+        title="New task"
+        className="rounded-md border border-edge px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:border-edge-strong hover:text-white"
+      >
+        Task
+      </button>
+      <button
+        type="button"
+        onClick={onNote}
+        title="New note"
+        className="rounded-md border border-edge px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:border-edge-strong hover:text-white"
+      >
+        Note
+      </button>
+      <button
+        type="button"
+        onClick={onEmail}
+        title="New email"
+        className="rounded-md border border-edge px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:border-edge-strong hover:text-white"
+      >
+        Email
+      </button>
+    </div>
+  );
+}
+
+function QuickTaskModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-16">
+      <div className="w-full max-w-4xl">
+        <TaskForm onDone={onClose} />
+      </div>
+    </div>
+  );
+}
+
+function QuickNoteModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const create = useMutation(api.activities.create);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  const submit = async () => {
+    const trimmed = body.trim();
+    if (!trimmed) return;
+    try {
+      setError(null);
+      await create({ type: "NOTE", body: trimmed });
+      setBody("");
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save note");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-16">
+      <Panel className="w-full max-w-lg p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-white">New note</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-neutral-500 hover:text-white"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+        <textarea
+          autoFocus
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder="Write a workspace note"
+          className="min-h-32 w-full resize-none rounded-md border border-edge bg-ink px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-accent focus:outline-none"
+        />
+        {error ? <p className="mt-2 text-xs text-red-400">{error}</p> : null}
+        <div className="mt-3 flex justify-end gap-2">
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={() => void submit()}
+            disabled={!body.trim()}
+          >
+            Add note
+          </Button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function MobileNavGroup({
+  title,
+  items,
+  onClick,
+}: {
+  title: string;
+  items: Array<{ id: string; to: string; label: string }>;
+  onClick: () => void;
+}) {
+  return (
+    <div className="mb-2">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-medium uppercase text-neutral-600">
+        {title}
+      </p>
+      {items.slice(0, 8).map((item) => (
+        <NavLink
+          key={item.id}
+          to={item.to}
+          onClick={onClick}
+          className={({ isActive }) =>
+            `block truncate rounded-md px-3 py-2 text-sm transition-colors ${
+              isActive
+                ? "bg-raised text-white"
+                : "text-neutral-400 hover:bg-panel hover:text-white"
+            }`
+          }
+        >
+          {item.label}
+        </NavLink>
+      ))}
     </div>
   );
 }

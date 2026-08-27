@@ -22,7 +22,7 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | File | Description |
 | --- | --- |
 | `convex.config.ts` | Installs all components; declares the required `CONTEXT_DEV_API_KEY`, `FIRECRAWL_API_KEY`, and `EXA_API_KEY` env vars |
-| `schema.ts` | All tables: workspace (with email/AI provider, sidebar prefs, and Slack settings), users, companies, contacts, deals, activities, custom fields, agent tasks, agent definitions and versions, runs, facts, chat threads, ask threads, log events, slackIdentities |
+| `schema.ts` | All tables: workspace (with email/AI provider, sidebar prefs, and Slack settings), users, companies, contacts, deals, activities, projects, project tasks, task comments and attachments, custom fields, agent tasks, agent definitions and versions, runs, facts, chat threads, ask threads, log events, slackIdentities |
 | `http.ts` | App-owned root routing; AgentMail webhook at /agentmail/webhook; signed Slack bot routes under /webhooks/slack/; static hosting registered as the catch-all |
 | `staticHosting.ts` | Exposes the deployment query for live reload on deploy |
 | `crons.ts` | Demo reset every 10 minutes, agent queue tick every minute |
@@ -31,8 +31,10 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `companies.ts` | Company list, detail, create (queues enrichment), update, delete, re-enrich, names picker |
 | `contacts.ts` | Contact list, detail with facts, create, update, delete |
 | `deals.ts` | Board grouped by stage, create, update, stage change with activity log, delete |
-| `activities.ts` | Timelines per record, open tasks, note and task creation with optional email reminders, task completion |
-| `fields.ts` | Custom field definitions and values, agent briefs, rename and option edits, archive and restore, batch `tableValues` query for table columns |
+| `customObjects.ts` | Metadata-driven custom objects: object definitions, paginated records, custom fields, and relationship mapping |
+| `activities.ts` | Timelines per record, workspace timeline feed, open tasks, note and task creation with optional email reminders, task completion |
+| `notes.ts` | Notes object API over NOTE activity rows: list, detail, create, update, delete, with linked CRM relations |
+| `fields.ts` | Custom field definitions and values for companies, contacts, deals, projects, and tasks; agent briefs, rename and option edits, archive and restore, batch `tableValues` query for table columns |
 | `tableSettings.ts` | Per-entity column preferences (rename, hide, pin) and new-record defaults (owner, industry, stage, currency, auto enrich); `entityDefaults` helper for create mutations |
 | `dashboard.ts` | Pipeline summary from aggregates, recent activity feed |
 | `agentTasks.ts` | The work queue: claim with leases, tick, execute through the workpool, rechecks with required reasons |
@@ -62,12 +64,21 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | File | Description |
 | --- | --- |
 | `main.tsx` | Convex client and router setup; derives the backend URL when served from convex.site |
-| `App.tsx` | Routes: landing, compare, docs, and the /app CRM shell (dashboard, companies, contacts, deals, ask, activity, agents, settings) |
+| `App.tsx` | Routes: landing, compare, docs, and the /app CRM shell (dashboard, timeline, companies, contacts, deals, projects, tasks, ask, activity/logs, agents, settings) |
 | `index.css` | Theme tokens for Composio dark (default) and Minimax light (`html.light`) |
 | `vite-env.d.ts` | Vite client types |
 | `lib/format.ts` | Money, relative time, short dates, stage labels, initials |
-| `lib/columns.ts` | Column registry for the three entity tables: built-in column definitions, custom field column keys, merge of saved preferences with active fields |
-| `components/dataTable.tsx` | Shared table infrastructure: `useEntityTable` and `useStickyColumns` hooks, portal header menu (sort, pin, hide, reset), Columns chooser dropdown, click-to-edit custom field cell |
+| `lib/columns.ts` | Column registry for entity tables: built-in column definitions, custom field column keys, ordered merge of saved preferences with active fields |
+| `lib/customFields.ts` | Canonical custom-field type list and display helpers for text, number, true/false, date/time, select, multi-select, rating, files, currency, email, link, phone, full name, address, and rich text |
+| `lib/csv.ts` | CSV parsing, generation, and download helpers used by record import/export |
+| `lib/interaction.ts` | Shared click guard for record rows and cards so buttons, links, menus, and form controls do not also trigger row open behavior |
+| `lib/tableFilters.tsx` | Compact table filter popover with URL-encodable filter state and client-side row filtering |
+| `components/dataTable.tsx` | Shared table infrastructure: `useEntityTable` and `useStickyColumns` hooks, portal header menu (filter, sort, move, hide), header plus-menu for hidden fields, Columns chooser dropdown, table plus-button custom-field popup, click-to-edit custom field cell |
+| `components/CustomFieldsEditor.tsx` | Inline or panel custom-field editor used by record panels and project/task detail pages |
+| `components/ObjectTableChrome.tsx` | Slim object-table chrome: title/selection header, primary action, animated right-side options panel, and compact view bar used by record tables |
+| `components/ObjectDataTable.tsx` | Shared selectable object table: local column preferences, header three-dot menus, show-hidden-fields plus button, active-row highlighting, inline add row, and load/footer slots for object workspaces |
+| `components/ObjectViews.tsx` | Shared lightweight object kanban and calendar renderers used when a saved view switches away from table mode, including selected kanban grouping fields and optional drag moves |
+| `components/SlideOver.tsx` | Animated drawer shell used by record and task side panels |
 | `components/ui.tsx` | Panel, buttons, inputs, themed Select and NumberInput and DateInput calendar, custom-drawn accent Checkbox with animated checkmark, shared TextLink with underline and hover variants, avatars, badges, empty states |
 | `components/Timeline.tsx` | Shared notes-and-tasks composer and feed for company and contact detail, with due dates in days or from a calendar, reminders, and complete buttons |
 | `components/ComposeEmail.tsx` | Floating compose window: draggable, resizable, To/Cc/Bcc/Subject, markdown body with preview, Convex storage attachments, provider-aware Send |
@@ -75,15 +86,22 @@ Brief description of what each file does. Updated 2026-08-09 19:55 UTC.
 | `components/DemoBanner.tsx` | Demo banner with live countdown to the next reset |
 | `components/ThemeToggle.tsx` | Light and dark mode switch backed by localStorage |
 | `components/CommandK.tsx` | Command-K search palette with keyboard navigation |
-| `app/AppLayout.tsx` | Sidebar shell: demo badge, search trigger, drag-reorderable and hideable nav, Phosphor collapse toggle, global ⌘K ⌘? ⌘. keys, fork and docs links, shortcuts and theme buttons; seeds the workspace on first visit |
+| `components/SavedViewButton.tsx` | Save current object-table URL state as a named view, switch supported view types, pick kanban grouping fields while creating views, reopen/delete saved views, and create views from the compact view selector |
+| `app/AppLayout.tsx` | Sidebar shell: demo badge, search trigger, quick actions for task/note/email creation, drag-reorderable and hideable nav with Timeline before Settings, Phosphor collapse toggle, global ⌘K ⌘? ⌘. keys, fork and docs links, shortcuts and theme buttons; seeds the workspace on first visit |
 | `app/Dashboard.tsx` | Stat cards, pipeline by stage, agent follow-ups, recent activity |
-| `app/Companies.tsx` | Column-driven company table: search, enrichment filter, header menus with sort and pin, custom field columns with inline edit, inline add row, pagination, create form |
+| `app/Companies.tsx` | Company workspace with shared table/kanban/calendar saved-view switching, selected kanban grouping fields, search, enrichment and custom filters, compact multi-select bulk toolbar, CSV import/export in the options panel, side-panel create form, header menus with sort and pin, custom field columns with inline edit, inline add row, pagination |
 | `app/CompanyDetail.tsx` | Tabs: overview (with click-to-edit custom fields), contacts, deals, activity, and the agent tab with record chat |
-| `app/Contacts.tsx` | Column-driven contact table: search, company filter, header menus, custom field columns with inline edit, inline add row, pagination |
+| `app/Contacts.tsx` | Contact workspace with shared table/kanban/calendar saved-view switching, selected kanban grouping fields, search, company and custom filters, compact multi-select bulk toolbar, CSV import/export in the options panel, side-panel create form, header menus, custom field columns with inline edit, inline add row, pagination |
 | `app/ContactDetail.tsx` | Facts with evidence bands, recheck scheduling, notes-and-tasks timeline |
-| `app/Deals.tsx` | Drag-and-drop board plus a column-driven list view with custom field columns, stage moves, and a create form prefilled from workspace defaults |
+| `app/CustomObjectPage.tsx` | Generic custom object workspace with paginated records, editable fields, relationship IDs, and side-panel detail editing |
+| `app/Deals.tsx` | Compact drag-and-drop stage kanban board plus column-driven table and calendar views with shared view-type switching, selected kanban grouping fields, custom filters, saved views, compact multi-select bulk toolbar, CSV import/export in the options panel, custom field columns, stage moves, and a side-panel create form prefilled from workspace defaults |
+| `app/Notes.tsx` | Notes object workspace backed by NOTE activity rows: selectable notes table, new note creation, note detail drawer, timeline, files placeholder, and note favorites |
+| `app/Projects.tsx` | Project workspace with URL-backed filters, shared saved-view type switching, selected kanban grouping fields with draggable status boards, table/kanban/calendar views, side-panel create form, CRM links, and progress summaries |
+| `app/ProjectDetail.tsx` | Project command center with record favorite, inline custom fields, related tasks, task side panel launch, details, CRM links, and delete |
+| `app/Tasks.tsx` | Task planning workspace: URL-backed filters, shared saved-view type switching, table/kanban/daily-weekly-monthly calendar views, side-panel new task form, multi-assignee editing, animated side panel, full detail page, subtasks, comments, custom fields, and file attachments |
 | `app/Ask.tsx` | Claude-style workspace chat: streamed replies, thread sub-sidebar with archive and delete, slash commands, time-aware greeting, provider notes |
 | `app/Activity.tsx` | Live function-outcome log with pause, select one or all, and clear, in the shape of the Convex dashboard |
+| `app/WorkspaceTimeline.tsx` | Workspace-level customer timeline with filters for notes, emails, tasks, calls, meetings, and linked CRM records |
 | `app/Agents.tsx` | Agent builder: describe a process, manage drafts, deploy, pause |
 | `app/Settings.tsx` | Sub-sidebar settings pages under /app/settings/:section: Team, Companies, Contacts, Deals (per-entity defaults, columns, custom fields), Integrations (with the "Adding API keys" panel), Slack (master switch, event toggles, channel picker with search, test button, /crm bot), Email (provider toggle plus compose defaults), AI provider, Sidebar show/hide |
 | `app/EntitySettingsSection.tsx` | The per-entity settings body: new-record defaults panel, column list with inline rename plus show and pin toggles, custom fields manager with type-specific creation, option editing, archive and restore |

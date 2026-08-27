@@ -7,6 +7,16 @@ import { activityType } from "./schema";
 import { authedQuery, writeMutation } from "./model/functions";
 import { notifySlack } from "./slack";
 
+const WORKSPACE_TIMELINE_TYPES = [
+  "NOTE",
+  "CALL",
+  "EMAIL",
+  "MEETING",
+  "TASK",
+  "STAGE_CHANGE",
+  "ENRICHMENT",
+] as const;
+
 // Attach author display data so the three timeline queries stay identical.
 async function withAuthor(ctx: QueryCtx, rows: Array<Doc<"activities">>) {
   const result = [];
@@ -29,7 +39,7 @@ export const forCompany = authedQuery({
       .query("activities")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
       .order("desc")
-      .take(100);
+      .collect();
     return await withAuthor(ctx, rows);
   },
 });
@@ -41,7 +51,7 @@ export const forContact = authedQuery({
       .query("activities")
       .withIndex("by_contact", (q) => q.eq("contactId", args.contactId))
       .order("desc")
-      .take(100);
+      .collect();
     return await withAuthor(ctx, rows);
   },
 });
@@ -53,7 +63,7 @@ export const forDeal = authedQuery({
       .query("activities")
       .withIndex("by_deal", (q) => q.eq("dealId", args.dealId))
       .order("desc")
-      .take(100);
+      .collect();
     return await withAuthor(ctx, rows);
   },
 });
@@ -69,6 +79,100 @@ export const openTasks = authedQuery({
       .take(50);
     const open = tasks.filter((t) => !t.completedAt);
     return await withAuthor(ctx, open);
+  },
+});
+
+export const workspaceTimeline = authedQuery({
+  args: {
+    type: v.optional(v.union(activityType, v.literal("ALL"))),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("activities"),
+      _creationTime: v.number(),
+      type: activityType,
+      body: v.string(),
+      companyId: v.optional(v.id("companies")),
+      contactId: v.optional(v.id("contacts")),
+      dealId: v.optional(v.id("deals")),
+      authorId: v.optional(v.id("users")),
+      dueAt: v.optional(v.number()),
+      completedAt: v.optional(v.number()),
+      meta: v.optional(
+        v.object({
+          fromStage: v.optional(v.string()),
+          toStage: v.optional(v.string()),
+        }),
+      ),
+      author: v.union(
+        v.object({
+          name: v.string(),
+          avatarUrl: v.optional(v.string()),
+        }),
+        v.null(),
+      ),
+      company: v.union(
+        v.object({
+          _id: v.id("companies"),
+          name: v.string(),
+          logoUrl: v.optional(v.string()),
+        }),
+        v.null(),
+      ),
+      contact: v.union(
+        v.object({
+          _id: v.id("contacts"),
+          name: v.string(),
+        }),
+        v.null(),
+      ),
+      deal: v.union(
+        v.object({
+          _id: v.id("deals"),
+          name: v.string(),
+        }),
+        v.null(),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const types =
+      !args.type || args.type === "ALL"
+        ? WORKSPACE_TIMELINE_TYPES
+        : [args.type];
+    const rows = [];
+    for (const type of types) {
+      rows.push(
+        ...(await ctx.db
+          .query("activities")
+          .withIndex("by_type", (q) => q.eq("type", type))
+          .order("desc")
+          .take(80)),
+      );
+    }
+    const enriched = await withAuthor(
+      ctx,
+      rows.sort((a, b) => b._creationTime - a._creationTime).slice(0, 200),
+    );
+    const result = [];
+    for (const row of enriched) {
+      const company = row.companyId
+        ? await ctx.db.get("companies", row.companyId)
+        : null;
+      const contact = row.contactId
+        ? await ctx.db.get("contacts", row.contactId)
+        : null;
+      const deal = row.dealId ? await ctx.db.get("deals", row.dealId) : null;
+      result.push({
+        ...row,
+        company: company
+          ? { _id: company._id, name: company.name, logoUrl: company.logoUrl }
+          : null,
+        contact: contact ? { _id: contact._id, name: contact.name } : null,
+        deal: deal ? { _id: deal._id, name: deal.name } : null,
+      });
+    }
+    return result;
   },
 });
 

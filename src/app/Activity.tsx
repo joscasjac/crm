@@ -79,7 +79,7 @@ export function Activity() {
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Activity"
-        subtitle="Every notable function outcome, live from the deployment. Timeline writes land here too. Resets with the demo."
+        subtitle="Every notable function outcome, live from the deployment. Timeline writes land here too."
         action={
           <div className="flex gap-2">
             <Button onClick={() => setPaused((p) => !p)}>

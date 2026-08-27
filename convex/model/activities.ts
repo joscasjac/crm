@@ -56,6 +56,10 @@ export async function insertActivity(
       lastActivityAt: Date.now(),
     });
   }
+  if (args.dealId) {
+    const deal = await ctx.db.get("deals", args.dealId);
+    recordName = recordName ?? deal?.name ?? null;
+  }
   await logEvent(ctx, {
     kind: "M",
     fn: "activities:create",

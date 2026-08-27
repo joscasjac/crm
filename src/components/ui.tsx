@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { initials } from "../lib/format";
 
@@ -143,12 +144,52 @@ export function Select({
   ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const updateMenuRect = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const rect = root.getBoundingClientRect();
+    const gap = 4;
+    const margin = 8;
+    const width = Math.max(rect.width, 144);
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    const menuHeight = Math.min(256, Math.max(44, options.length * 36 + 8));
+    const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(
+      256,
+      Math.max(132, (openAbove ? spaceAbove : spaceBelow) - gap),
+    );
+    const actualHeight = Math.min(menuHeight, maxHeight);
+    const left = Math.min(
+      Math.max(margin, rect.left),
+      Math.max(margin, window.innerWidth - width - margin),
+    );
+    setMenuRect({
+      top: openAbove ? rect.top - actualHeight - gap : rect.bottom + gap,
+      left,
+      width,
+      maxHeight,
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -157,11 +198,19 @@ export function Select({
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", updateMenuRect);
+    window.addEventListener("scroll", updateMenuRect, true);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", updateMenuRect);
+      window.removeEventListener("scroll", updateMenuRect, true);
     };
-  }, [open]);
+  }, [open, updateMenuRect]);
+
+  useLayoutEffect(() => {
+    if (open) updateMenuRect();
+  }, [open, options.length, updateMenuRect, value]);
 
   const selected = options.find((option) => option.value === value);
   const pad = size === "sm" ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm";
@@ -190,44 +239,58 @@ export function Select({
           <path d="m6 9 6 6 6-9" transform="translate(0 -1.5)" />
         </svg>
       </button>
-      {open ? (
-        <div className="absolute left-0 top-full z-30 mt-1 max-h-64 w-full min-w-36 overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-xl">
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
+      {open && menuRect
+        ? createPortal(
+            <div
+              ref={menuRef}
+              data-select-menu
+              style={{
+                position: "fixed",
+                top: menuRect.top,
+                left: menuRect.left,
+                width: menuRect.width,
+                maxHeight: menuRect.maxHeight,
               }}
-              className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left transition-colors ${
-                size === "sm" ? "text-xs" : "text-sm"
-              } ${
-                option.value === value
-                  ? "bg-raised text-white"
-                  : "text-neutral-400 hover:bg-raised hover:text-white"
-              }`}
+              className="z-50 overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-xl"
             >
-              <span className="truncate">{option.label}</span>
-              {option.value === value ? (
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0"
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left transition-colors ${
+                    size === "sm" ? "text-xs" : "text-sm"
+                  } ${
+                    option.value === value
+                      ? "bg-raised text-white"
+                      : "text-neutral-400 hover:bg-raised hover:text-white"
+                  }`}
                 >
-                  <path d="m4 12 5 5L20 6" />
-                </svg>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
+                  <span className="truncate">{option.label}</span>
+                  {option.value === value ? (
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0"
+                    >
+                      <path d="m4 12 5 5L20 6" />
+                    </svg>
+                  ) : null}
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -601,9 +664,11 @@ export function CompanyLogo({
 export function Badge({
   children,
   tone = "neutral",
+  className,
 }: {
   children: ReactNode;
   tone?: "neutral" | "green" | "yellow" | "red";
+  className?: string;
 }) {
   const tones = {
     neutral: "border-edge text-neutral-400",
@@ -613,7 +678,7 @@ export function Badge({
   }[tone];
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${tones}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${className ?? tones}`}
     >
       {children}
     </span>

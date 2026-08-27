@@ -1,10 +1,13 @@
 import { v } from "convex/values";
 import { authedQuery, writeMutation } from "./model/functions";
+import { fieldType } from "./schema";
 
 const entityValidator = v.union(
   v.literal("company"),
   v.literal("contact"),
   v.literal("deal"),
+  v.literal("project"),
+  v.literal("task"),
 );
 
 // Definitions plus this record's values in one read.
@@ -49,12 +52,7 @@ export const createDefinition = writeMutation({
     entity: entityValidator,
     key: v.string(),
     label: v.string(),
-    type: v.union(
-      v.literal("text"),
-      v.literal("number"),
-      v.literal("select"),
-      v.literal("date"),
-    ),
+    type: fieldType,
     options: v.optional(v.array(v.string())),
     agentFilled: v.boolean(),
     agentBrief: v.optional(v.string()),
@@ -103,7 +101,7 @@ export const updateDefinition = writeMutation({
       patch.label = label;
     }
     if (args.options !== undefined) {
-      if (definition.type !== "select") {
+      if (definition.type !== "select" && definition.type !== "multiSelect") {
         throw new Error("Options only apply to select fields");
       }
       const options = args.options.map((o) => o.trim()).filter(Boolean);
@@ -154,12 +152,7 @@ export const tableValues = authedQuery({
         entity: entityValidator,
         key: v.string(),
         label: v.string(),
-        type: v.union(
-          v.literal("text"),
-          v.literal("number"),
-          v.literal("select"),
-          v.literal("date"),
-        ),
+        type: fieldType,
         options: v.optional(v.array(v.string())),
         order: v.number(),
         archived: v.boolean(),
@@ -204,12 +197,41 @@ export const setValue = writeMutation({
     if (!definition || definition.archived) {
       throw new Error("Field not found or archived");
     }
+    if (definition.type === "select" && definition.options && args.value) {
+      if (!definition.options.includes(args.value)) {
+        throw new Error(`Value must be one of: ${definition.options.join(", ")}`);
+      }
+    }
+    if (definition.type === "multiSelect" && definition.options && args.value) {
+      const values = args.value
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const invalid = values.filter((value) => !definition.options?.includes(value));
+      if (invalid.length > 0) {
+        throw new Error(`Value must be one of: ${definition.options.join(", ")}`);
+      }
+    }
+    if (definition.type === "rating" && args.value) {
+      const rating = Number(args.value);
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        throw new Error("Rating must be between 1 and 5");
+      }
+    }
     if (
-      definition.type === "select" &&
-      definition.options &&
-      !definition.options.includes(args.value)
+      (definition.type === "number" || definition.type === "currency") &&
+      args.value &&
+      !Number.isFinite(Number(args.value))
     ) {
-      throw new Error(`Value must be one of: ${definition.options.join(", ")}`);
+      throw new Error("Value must be a number");
+    }
+    if (
+      definition.type === "boolean" &&
+      args.value &&
+      args.value !== "true" &&
+      args.value !== "false"
+    ) {
+      throw new Error("Value must be true or false");
     }
     const existing = await ctx.db
       .query("fieldValues")

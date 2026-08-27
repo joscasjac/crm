@@ -1,6 +1,7 @@
 import { AgentMail } from "@agentmail/convex";
 import { registerStaticRoutes } from "@convex-dev/static-hosting";
 import { httpRouter } from "convex/server";
+import { auth } from "./auth";
 import { httpAction } from "./_generated/server";
 import { components } from "./_generated/api";
 import {
@@ -8,8 +9,11 @@ import {
   eventsRoute,
   interactivityRoute,
 } from "./slackBot";
+import { codexToolsRoute } from "./codexApi";
 
 const http = httpRouter();
+
+auth.addHttpRoutes(http);
 
 // Inbound mail for the AgentMail component. Register the URL
 // <deployment>.convex.site/agentmail/webhook in the AgentMail dashboard and
@@ -46,6 +50,16 @@ http.route({
   path: "/webhooks/slack/events",
   method: "POST",
   handler: eventsRoute,
+});
+
+// Local Codex and other agent clients call this narrow gateway with a bearer
+// token generated in Settings. It validates the token, checks tool scopes, and
+// then calls internal CRM functions; the public surface is one explicit tool
+// endpoint rather than every mutation in the app.
+http.route({
+  path: "/api/codex/tools",
+  method: "POST",
+  handler: codexToolsRoute,
 });
 
 // The built Vite app is served straight from Convex storage. Exact app routes

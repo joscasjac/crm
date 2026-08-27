@@ -7,6 +7,14 @@ const entityValidator = v.union(
   v.literal("company"),
   v.literal("contact"),
   v.literal("deal"),
+  v.literal("project"),
+  v.literal("task"),
+);
+
+const defaultableEntityValidator = v.union(
+  v.literal("company"),
+  v.literal("contact"),
+  v.literal("deal"),
 );
 
 const columnPref = v.object({
@@ -18,7 +26,7 @@ const columnPref = v.object({
 
 async function settingsRow(
   ctx: QueryCtx | MutationCtx,
-  entity: "company" | "contact" | "deal",
+  entity: "company" | "contact" | "deal" | "project" | "task",
 ) {
   return await ctx.db
     .query("tableSettings")
@@ -74,7 +82,7 @@ export const saveColumns = writeMutation({
 // Defaults save one field at a time from the settings page. null clears.
 export const saveDefaults = writeMutation({
   args: {
-    entity: entityValidator,
+    entity: defaultableEntityValidator,
     ownerId: v.optional(v.union(v.id("users"), v.null())),
     industry: v.optional(v.union(v.string(), v.null())),
     stage: v.optional(v.union(dealStage, v.null())),

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import {
@@ -27,21 +27,31 @@ const DAY = 86_400_000;
 export function TimelineComposer({
   companyId,
   contactId,
+  dealId,
+  defaultMode = "NOTE",
+  modeLocked = false,
 }: {
   companyId?: Id<"companies">;
   contactId?: Id<"contacts">;
+  dealId?: Id<"deals">;
+  defaultMode?: "NOTE" | "TASK";
+  modeLocked?: boolean;
 }) {
   const create = useMutation(api.activities.create);
   const capabilities = useQuery(api.capabilities.status);
   const provider = useQuery(api.email.provider);
 
-  const [mode, setMode] = useState<"NOTE" | "TASK">("NOTE");
+  const [mode, setMode] = useState<"NOTE" | "TASK">(defaultMode);
   const [body, setBody] = useState("");
   const [dueMode, setDueMode] = useState<"days" | "date">("days");
   const [dueDays, setDueDays] = useState("3");
   const [dueDate, setDueDate] = useState("");
   const [remind, setRemind] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMode(defaultMode);
+  }, [defaultMode]);
 
   const emailReady =
     provider && capabilities
@@ -70,6 +80,7 @@ export function TimelineComposer({
         body: trimmed,
         companyId,
         contactId,
+        dealId,
         dueAt: mode === "TASK" ? dueAtFromInputs() : undefined,
         remindMe: mode === "TASK" ? remind : undefined,
       });
@@ -83,21 +94,23 @@ export function TimelineComposer({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <div className="flex shrink-0 rounded-md border border-edge p-0.5 text-xs">
-          {(["NOTE", "TASK"] as const).map((option) => (
-            <button
-              key={option}
-              onClick={() => setMode(option)}
-              className={`rounded px-2.5 py-1 capitalize transition-colors ${
-                mode === option
-                  ? "bg-raised text-white"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
-            >
-              {option.toLowerCase()}
-            </button>
-          ))}
-        </div>
+        {modeLocked ? null : (
+          <div className="flex shrink-0 rounded-md border border-edge p-0.5 text-xs">
+            {(["NOTE", "TASK"] as const).map((option) => (
+              <button
+                key={option}
+                onClick={() => setMode(option)}
+                className={`rounded px-2.5 py-1 capitalize transition-colors ${
+                  mode === option
+                    ? "bg-raised text-white"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {option.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        )}
         <Input
           placeholder={
             mode === "NOTE"
@@ -109,7 +122,7 @@ export function TimelineComposer({
           onKeyDown={(e) => e.key === "Enter" && void submit()}
         />
         <Button variant="primary" onClick={() => void submit()}>
-          Add
+          {mode === "NOTE" ? "Add note" : "Add task"}
         </Button>
       </div>
       {mode === "TASK" ? (
@@ -253,15 +266,17 @@ export function TimelineFeed({
 export function TimelinePanel({
   companyId,
   contactId,
+  dealId,
   activities,
 }: {
   companyId?: Id<"companies">;
   contactId?: Id<"contacts">;
+  dealId?: Id<"deals">;
   activities: Array<ActivityRow> | undefined;
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <TimelineComposer companyId={companyId} contactId={contactId} />
+      <TimelineComposer companyId={companyId} contactId={contactId} dealId={dealId} />
       <Panel>
         <TimelineFeed activities={activities} />
       </Panel>

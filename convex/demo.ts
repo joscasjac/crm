@@ -16,6 +16,9 @@ const TABLES = [
   "contacts",
   "deals",
   "activities",
+  "projects",
+  "projectTasks",
+  "taskComments",
   "fieldDefinitions",
   "fieldValues",
   "agentTasks",
@@ -23,9 +26,34 @@ const TABLES = [
   "agentVersions",
   "agentRuns",
   "facts",
+  "codexApiTokens",
+  "favorites",
+  "savedViews",
   "chatThreads",
   "askThreads",
   "logEvents",
+] as const;
+
+const STARTER_DATA_TABLES = [
+  "companies",
+  "contacts",
+  "deals",
+  "activities",
+  "fieldDefinitions",
+  "fieldValues",
+  "tableSettings",
+  "agentTasks",
+  "agentDefinitions",
+  "agentVersions",
+  "agentRuns",
+  "facts",
+  "codexApiTokens",
+  "favorites",
+  "savedViews",
+  "chatThreads",
+  "askThreads",
+  "logEvents",
+  "slackIdentities",
 ] as const;
 
 // Wipe everything and reseed. Runs on a cron every ten minutes in demo mode,
@@ -86,6 +114,98 @@ export const disableDemoMode = internalMutation({
         "Demo mode is off. The reset cron is now a no-op; remove it from convex/crons.ts when convenient.",
     });
     return null;
+  },
+});
+
+// One-time setup for a real fork. It keeps the seeded CRM data, stops open
+// demo writes, and chooses which email may create an authenticated session.
+export const configureRealInstall = internalMutation({
+  args: {
+    allowedEmail: v.string(),
+    workspaceName: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const allowedEmail = args.allowedEmail.trim().toLowerCase();
+    if (!allowedEmail.includes("@")) {
+      throw new Error("Enter a valid allowedEmail.");
+    }
+
+    let workspace = await ctx.db.query("workspace").first();
+    if (!workspace) {
+      await seedAll(ctx, Date.now());
+      workspace = await ctx.db.query("workspace").first();
+    }
+    if (!workspace) {
+      throw new Error("Workspace was not created.");
+    }
+
+    await ctx.db.patch("workspace", workspace._id, {
+      demoMode: false,
+      allowedSignIn: [allowedEmail],
+      ...(args.workspaceName ? { name: args.workspaceName } : {}),
+    });
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "demo:configureRealInstall",
+      status: "success",
+      message: `Real install enabled for ${allowedEmail}.`,
+    });
+    return null;
+  },
+});
+
+// Clear the sample CRM records after a fork has been configured for real use.
+// Keeps auth tables, workspace settings, and the allowlisted workspace user.
+export const clearStarterData = internalMutation({
+  args: {
+    allowedEmail: v.string(),
+  },
+  returns: v.object({
+    deletedRows: v.number(),
+    keptUsers: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const allowedEmail = args.allowedEmail.trim().toLowerCase();
+    if (!allowedEmail.includes("@")) {
+      throw new Error("Enter a valid allowedEmail.");
+    }
+
+    let deletedRows = 0;
+    for (const table of STARTER_DATA_TABLES) {
+      const rows = await ctx.db.query(table).take(1000);
+      for (const row of rows) {
+        await ctx.db.delete(table, row._id);
+        deletedRows += 1;
+      }
+    }
+
+    const authAccounts = await ctx.db.query("authAccounts").take(1000);
+    const authUserIds = new Set(authAccounts.map((account) => account.userId));
+
+    let keptUsers = 0;
+    const users = await ctx.db.query("users").take(1000);
+    for (const user of users) {
+      if (
+        user.email.trim().toLowerCase() === allowedEmail ||
+        authUserIds.has(user._id)
+      ) {
+        keptUsers += 1;
+      } else {
+        await ctx.db.delete("users", user._id);
+        deletedRows += 1;
+      }
+    }
+
+    await dealsByStage.clearAll(ctx);
+    await logEvent(ctx, {
+      kind: "M",
+      fn: "demo:clearStarterData",
+      status: "success",
+      message: `Cleared ${deletedRows} starter rows and kept ${keptUsers} allowed user row(s).`,
+    });
+
+    return { deletedRows, keptUsers };
   },
 });
 

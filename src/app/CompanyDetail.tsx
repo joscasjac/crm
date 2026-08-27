@@ -1,11 +1,12 @@
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ComposeEmail } from "../components/ComposeEmail";
 import { FieldCell } from "../components/dataTable";
+import { FavoriteButton } from "../components/FavoriteButton";
 import { TimelinePanel } from "../components/Timeline";
 import {
   Avatar,
@@ -31,9 +32,24 @@ export function CompanyDetail() {
   );
   const reEnrich = useMutation(api.companies.reEnrich);
   const remove = useMutation(api.companies.remove);
+  const updateCompany = useMutation(api.companies.update);
   const [tab, setTab] = useState<Tab>("Overview");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [domain, setDomain] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [description, setDescription] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!company || editing) return;
+    setName(company.name);
+    setDomain(company.domain ?? "");
+    setIndustry(company.industry ?? "");
+    setDescription(company.description ?? "");
+  }, [company, editing]);
 
   if (company === undefined) {
     return <p className="text-sm text-neutral-500">Loading…</p>;
@@ -41,6 +57,34 @@ export function CompanyDetail() {
   if (company === null) {
     return <EmptyState message="Company not found. It may have been reset." />;
   }
+
+  const saveCompany = async () => {
+    try {
+      setSaveFeedback(null);
+      const trimmedName = name.trim();
+      if (!trimmedName) throw new Error("Name is required");
+      await updateCompany({
+        companyId: company._id,
+        name: trimmedName,
+        domain: domain.trim() || null,
+        industry: industry.trim() || null,
+        description: description.trim() || null,
+      });
+      setEditing(false);
+      setSaveFeedback("Saved.");
+    } catch (err) {
+      setSaveFeedback(err instanceof Error ? err.message : "Could not save");
+    }
+  };
+
+  const cancelEdit = () => {
+    setName(company.name);
+    setDomain(company.domain ?? "");
+    setIndustry(company.industry ?? "");
+    setDescription(company.description ?? "");
+    setEditing(false);
+    setSaveFeedback(null);
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -58,6 +102,13 @@ export function CompanyDetail() {
           <EnrichmentBadge status={company.enrichmentStatus} />
         </div>
         <div className="flex flex-wrap gap-2">
+          <FavoriteButton
+            label={company.name}
+            href={`/app/companies/${company._id}`}
+            kind="record"
+            entityType="company"
+            entityId={company._id}
+          />
           <Button onClick={() => setComposeOpen(true)}>Email</Button>
           <Button
             onClick={() =>
@@ -122,6 +173,80 @@ export function CompanyDetail() {
         </Panel>
       </div>
 
+      <Panel className="mb-4 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-white">Company details</h3>
+          {editing ? (
+            <div className="flex items-center gap-2">
+              <Button variant="primary" onClick={() => void saveCompany()}>
+                Save
+              </Button>
+              <Button variant="ghost" onClick={cancelEdit}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setEditing(true)}>Edit</Button>
+          )}
+        </div>
+        {editing ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-neutral-500">
+              Name
+              <Input
+                className="mt-1"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+            <label className="text-xs text-neutral-500">
+              Domain
+              <Input
+                className="mt-1"
+                value={domain}
+                onChange={(event) => setDomain(event.target.value)}
+                placeholder="acme.com"
+              />
+            </label>
+            <label className="text-xs text-neutral-500">
+              Industry
+              <Input
+                className="mt-1"
+                value={industry}
+                onChange={(event) => setIndustry(event.target.value)}
+                placeholder="Add industry"
+              />
+            </label>
+            <label className="text-xs text-neutral-500 sm:col-span-2">
+              Description
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Add description"
+                className="mt-1 min-h-24 w-full rounded-md border border-edge bg-ink px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-accent focus:outline-none"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <DetailLine label="Domain" value={company.domain ?? "Not set"} />
+            <DetailLine
+              label="Industry"
+              value={company.industry ?? "Not set"}
+            />
+            <div className="sm:col-span-2">
+              <p className="text-xs text-neutral-600">Description</p>
+              <p className="mt-0.5 text-neutral-300">
+                {company.description ?? "Not set"}
+              </p>
+            </div>
+          </div>
+        )}
+        {saveFeedback ? (
+          <p className="mt-3 text-xs text-neutral-400">{saveFeedback}</p>
+        ) : null}
+      </Panel>
+
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-edge">
         {TABS.map((t) => (
           <button
@@ -161,6 +286,15 @@ export function CompanyDetail() {
 type CompanyData = NonNullable<
   FunctionReturnType<typeof api.companies.get>
 >;
+
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-neutral-600">{label}</p>
+      <p className="mt-0.5 truncate text-neutral-300">{value}</p>
+    </div>
+  );
+}
 
 function Overview({ company }: { company: CompanyData }) {
   const fields = useQuery(api.fields.forEntity, {

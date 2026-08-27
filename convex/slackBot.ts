@@ -192,7 +192,7 @@ export const verifyIdentity = internalMutation({
     const email = args.email.toLowerCase();
     const member = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("email", (q) => q.eq("email", email))
       .unique();
     let allowed = !!member;
     if (!allowed) {

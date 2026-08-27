@@ -56,6 +56,24 @@ export async function deleteContactCascade(
 ): Promise<void> {
   const contact = await ctx.db.get("contacts", contactId);
   if (!contact) return;
+  const companies = await ctx.db
+    .query("companies")
+    .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", contactId))
+    .collect();
+  for (const company of companies) {
+    await ctx.db.patch("companies", company._id, {
+      primaryContactId: undefined,
+    });
+  }
+  const deals = await ctx.db
+    .query("deals")
+    .withIndex("by_primaryContactId", (q) => q.eq("primaryContactId", contactId))
+    .collect();
+  for (const deal of deals) {
+    await ctx.db.patch("deals", deal._id, {
+      primaryContactId: undefined,
+    });
+  }
   const activities = await ctx.db
     .query("activities")
     .withIndex("by_contact", (q) => q.eq("contactId", contactId))

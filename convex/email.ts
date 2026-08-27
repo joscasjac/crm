@@ -119,7 +119,7 @@ const attachmentValidator = v.object({
   name: v.string(),
 });
 
-// Compose from a company or contact record. Always writes the EMAIL
+// Compose from a company, contact, or deal record. Always writes the EMAIL
 // activity (timeline plus the Activity page) so the CRM history is
 // complete even on keyless installs; the actual vendor send happens in
 // the scheduled action and is skipped with a logged reason when the
@@ -133,6 +133,7 @@ export const compose = writeMutation({
     body: v.string(),
     companyId: v.optional(v.id("companies")),
     contactId: v.optional(v.id("contacts")),
+    dealId: v.optional(v.id("deals")),
     attachments: v.array(attachmentValidator),
   },
   returns: v.null(),
@@ -160,6 +161,7 @@ export const compose = writeMutation({
       body: summary,
       companyId: args.companyId,
       contactId: args.contactId,
+      dealId: args.dealId,
     });
 
     await ctx.scheduler.runAfter(0, internal.email.sendComposed, {

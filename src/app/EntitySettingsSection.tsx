@@ -7,11 +7,19 @@ import {
   COMPANY_COLUMNS,
   CONTACT_COLUMNS,
   DEAL_COLUMNS,
+  PROJECT_COLUMNS,
+  TASK_COLUMNS,
   fieldColumnKey,
   resolveColumns,
   upsertPref,
 } from "../lib/columns";
 import type { ResolvedColumn } from "../lib/columns";
+import {
+  CUSTOM_FIELD_TYPES,
+  customFieldNeedsOptions,
+  customFieldTypeLabel,
+} from "../lib/customFields";
+import type { CustomFieldType } from "../lib/customFields";
 import { stageLabel } from "../lib/format";
 
 // One settings page per record type: what new records start with, how the
@@ -19,18 +27,23 @@ import { stageLabel } from "../lib/format";
 // entirely new columns. The tables read the same tableSettings row, so a
 // rename here shows up in the Companies table immediately.
 
-type Entity = "company" | "contact" | "deal";
+type Entity = "company" | "contact" | "deal" | "project" | "task";
+type DefaultableEntity = "company" | "contact" | "deal";
 
 const REGISTRY = {
   company: COMPANY_COLUMNS,
   contact: CONTACT_COLUMNS,
   deal: DEAL_COLUMNS,
+  project: PROJECT_COLUMNS,
+  task: TASK_COLUMNS,
 } as const;
 
 const ENTITY_NOUN: Record<Entity, string> = {
   company: "company",
   contact: "contact",
   deal: "deal",
+  project: "project",
+  task: "task",
 };
 
 const STAGES = [
@@ -45,16 +58,20 @@ const STAGES = [
 export function EntitySettingsSection({ entity }: { entity: Entity }) {
   return (
     <div className="flex flex-col gap-4">
-      <DefaultsPanel entity={entity} />
+      {isDefaultableEntity(entity) ? <DefaultsPanel entity={entity} /> : null}
       <ColumnsPanel entity={entity} />
       <CustomFieldsPanel entity={entity} />
     </div>
   );
 }
 
+function isDefaultableEntity(entity: Entity): entity is DefaultableEntity {
+  return entity === "company" || entity === "contact" || entity === "deal";
+}
+
 // New-record defaults. Every control saves on change; there is no separate
 // save button to forget.
-function DefaultsPanel({ entity }: { entity: Entity }) {
+function DefaultsPanel({ entity }: { entity: DefaultableEntity }) {
   const settings = useQuery(api.tableSettings.get, { entity });
   const users = useQuery(api.users.list);
   const saveDefaults = useMutation(api.tableSettings.saveDefaults);
@@ -308,15 +325,6 @@ function ColumnRow({
   );
 }
 
-const FIELD_TYPES = [
-  { value: "text", label: "Text" },
-  { value: "number", label: "Number" },
-  { value: "select", label: "Select" },
-  { value: "date", label: "Date" },
-] as const;
-
-type FieldType = (typeof FIELD_TYPES)[number]["value"];
-
 // Custom fields add real columns to the table. Each one appears in every row
 // with click-to-edit cells, in the column chooser, and (for companies) can
 // carry an agent brief so research fills it automatically.
@@ -324,7 +332,7 @@ function CustomFieldsPanel({ entity }: { entity: Entity }) {
   const definitions = useQuery(api.fields.listDefinitions, { entity });
   const createDefinition = useMutation(api.fields.createDefinition);
   const [label, setLabel] = useState("");
-  const [type, setType] = useState<FieldType>("text");
+  const [type, setType] = useState<CustomFieldType>("text");
   const [options, setOptions] = useState("");
   const [agentBrief, setAgentBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -337,13 +345,13 @@ function CustomFieldsPanel({ entity }: { entity: Entity }) {
     try {
       setError(null);
       const parsedOptions =
-        type === "select"
+        customFieldNeedsOptions(type)
           ? options
               .split(",")
               .map((o) => o.trim())
               .filter(Boolean)
           : undefined;
-      if (type === "select" && (parsedOptions?.length ?? 0) === 0) {
+      if (customFieldNeedsOptions(type) && (parsedOptions?.length ?? 0) === 0) {
         throw new Error("Add at least one option, separated by commas");
       }
       await createDefinition({
@@ -393,11 +401,11 @@ function CustomFieldsPanel({ entity }: { entity: Entity }) {
           <Select
             ariaLabel="Field type"
             value={type}
-            onChange={(value) => setType(value as FieldType)}
-            options={[...FIELD_TYPES]}
+            onChange={(value) => setType(value as CustomFieldType)}
+            options={[...CUSTOM_FIELD_TYPES]}
           />
         </div>
-        {type === "select" ? (
+        {customFieldNeedsOptions(type) ? (
           <div className="w-full sm:w-64">
             <label className="mb-1 block text-xs text-neutral-500">
               Options, comma separated
@@ -501,7 +509,7 @@ function FieldRow({
           className="w-40 rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-neutral-200 transition-colors hover:border-edge focus:border-accent focus:bg-ink focus:outline-none"
         />
         <span className="rounded bg-raised px-1.5 py-0.5 text-[10px] text-neutral-500">
-          {definition.type}
+          {customFieldTypeLabel(definition.type)}
         </span>
         {definition.agentFilled ? (
           <span className="text-[10px] text-accent">agent</span>
@@ -515,7 +523,7 @@ function FieldRow({
           </Button>
         </div>
       </div>
-      {definition.type === "select" ? (
+      {customFieldNeedsOptions(definition.type) ? (
         <input
           value={optionsDraft ?? (definition.options ?? []).join(", ")}
           onChange={(e) => setOptionsDraft(e.target.value)}

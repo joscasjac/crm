@@ -3,18 +3,30 @@ import type { FunctionReturnType } from "convex/server";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { BuiltinColumn, ColumnPref, ResolvedColumn } from "../lib/columns";
-import { fieldColumnKey, resolveColumns, upsertPref } from "../lib/columns";
+import {
+  fieldColumnKey,
+  orderPrefs,
+  resolveColumns,
+  upsertPref,
+} from "../lib/columns";
+import {
+  CUSTOM_FIELD_TYPES,
+  customFieldNeedsOptions,
+  formatCustomFieldValue,
+} from "../lib/customFields";
+import type { CustomFieldType } from "../lib/customFields";
 import { Checkbox, DateInput, Select } from "./ui";
 
 // Shared plumbing for the Companies, Contacts, and Deals tables: one hook
 // that merges saved column prefs with active custom fields, sticky offsets
-// for pinned columns, a per-column header menu (sort, pin, hide, reset), a
-// column chooser for the toolbar, and an inline editor for custom field
+// for pinned columns, a per-column header menu (filter, sort, move, hide), a
+// header plus-menu for hidden fields, a column chooser, and an inline editor for custom field
 // cells. All of it renders with the app's own primitives; no grid library.
 
-export type TableEntity = "company" | "contact" | "deal";
+export type TableEntity = "company" | "contact" | "deal" | "project" | "task";
 
 export type FieldDefinition = FunctionReturnType<
   typeof api.fields.tableValues
@@ -50,16 +62,25 @@ export function useEntityTable(
     void saveColumns({ entity, columns: upsertPref(prefs, key, patch) });
   };
 
+  const moveColumn = (key: string, direction: -1 | 1) => {
+    void saveColumns({
+      entity,
+      columns: orderPrefs(prefs, columns, key, direction),
+    });
+  };
+
   const fieldValue = (definition: FieldDefinition, entityId: string) =>
     values[`${definition._id}:${entityId}`];
 
   return {
+    entity,
     loading: settings === undefined || fieldData === undefined,
     columns,
     visible,
     definitionByColumn,
     defaults: settings?.defaults,
     setPref,
+    moveColumn,
     reset: () => void saveColumns({ entity, columns: [] }),
     fieldValue,
   };
@@ -150,6 +171,19 @@ const glyph = (path: ReactNode) => (
 const ICONS = {
   asc: glyph(<path d="M12 19V5m-6 6 6-6 6 6" />),
   desc: glyph(<path d="M12 5v14m6-6-6 6-6-6" />),
+  filter: glyph(
+    <>
+      <path d="M4 5h16l-6 7v5l-4 2v-7Z" />
+    </>,
+  ),
+  sort: glyph(
+    <>
+      <path d="M6 8h12M6 12h8M6 16h4" />
+      <path d="M18 14v5m0 0 2-2m-2 2-2-2" />
+    </>,
+  ),
+  left: glyph(<path d="M19 12H5m6-6-6 6 6 6" />),
+  right: glyph(<path d="M5 12h14m-6-6 6 6-6 6" />),
   pin: glyph(
     <>
       <path d="M12 16v6" />
@@ -186,11 +220,13 @@ function PortalMenu({
   onClose,
   children,
   width = 192,
+  estimatedHeight = 240,
 }: {
   anchor: DOMRect;
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  estimatedHeight?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -220,7 +256,10 @@ function PortalMenu({
   }, [onClose]);
 
   const left = Math.max(8, Math.min(anchor.left, window.innerWidth - width - 8));
-  const top = Math.min(anchor.bottom + 4, window.innerHeight - 60);
+  const top = Math.max(
+    8,
+    Math.min(anchor.bottom + 4, window.innerHeight - estimatedHeight - 8),
+  );
 
   return createPortal(
     <div
@@ -239,17 +278,20 @@ function MenuItem({
   icon,
   label,
   onClick,
+  disabled,
 }: {
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-300 transition-colors hover:bg-raised hover:text-white"
+      disabled={disabled}
+      className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-neutral-300 transition-colors hover:bg-raised hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
     >
       <span className="flex w-4 shrink-0 justify-center text-neutral-500">
         {icon}
@@ -267,18 +309,24 @@ export function HeaderCell({
   sticky,
   sort,
   onSort,
+  onFilter,
   align = "left",
 }: {
   column: ResolvedColumn;
-  table: Pick<EntityTable, "setPref" | "reset">;
+  table: Pick<EntityTable, "visible" | "setPref" | "moveColumn" | "reset">;
   sticky: StickyColumns;
   sort?: "asc" | "desc" | null;
   onSort?: (dir: "asc" | "desc") => void;
+  onFilter?: () => void;
   align?: "left" | "right";
 }) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const pin = sticky.pinProps(column, "header");
   const close = () => setAnchor(null);
+  const visibleIndex = table.visible.findIndex((item) => item.key === column.key);
+  const canMoveLeft = visibleIndex > 0;
+  const canMoveRight =
+    visibleIndex >= 0 && visibleIndex < table.visible.length - 1;
 
   return (
     <th
@@ -330,33 +378,44 @@ export function HeaderCell({
         </button>
       </div>
       {anchor ? (
-        <PortalMenu anchor={anchor} onClose={close}>
+        <PortalMenu anchor={anchor} onClose={close} width={220}>
+          <MenuItem
+            icon={ICONS.filter}
+            label="Filter"
+            disabled={!onFilter}
+            onClick={() => {
+              onFilter?.();
+              close();
+            }}
+          />
           {onSort ? (
             <>
               <MenuItem
-                icon={ICONS.asc}
-                label="Sort ascending"
+                icon={ICONS.sort}
+                label={sort === "asc" ? "Sort descending" : "Sort"}
                 onClick={() => {
-                  onSort("asc");
+                  onSort(sort === "asc" ? "desc" : "asc");
                   close();
                 }}
               />
-              <MenuItem
-                icon={ICONS.desc}
-                label="Sort descending"
-                onClick={() => {
-                  onSort("desc");
-                  close();
-                }}
-              />
-              {menuDivider}
             </>
           ) : null}
+          {menuDivider}
           <MenuItem
-            icon={ICONS.pin}
-            label={column.pinned ? "Unpin column" : "Pin column"}
+            icon={ICONS.left}
+            label="Move left"
+            disabled={!canMoveLeft}
             onClick={() => {
-              table.setPref(column.key, { pinned: !column.pinned });
+              table.moveColumn(column.key, -1);
+              close();
+            }}
+          />
+          <MenuItem
+            icon={ICONS.right}
+            label="Move right"
+            disabled={!canMoveRight}
+            onClick={() => {
+              table.moveColumn(column.key, 1);
               close();
             }}
           />
@@ -370,15 +429,91 @@ export function HeaderCell({
               }}
             />
           ) : null}
-          {menuDivider}
-          <MenuItem
-            icon={ICONS.reset}
-            label="Reset columns"
-            onClick={() => {
-              table.reset();
-              close();
-            }}
+        </PortalMenu>
+      ) : null}
+    </th>
+  );
+}
+
+export function AddColumnHeaderCell({
+  table,
+  settingsHref = "/app/settings",
+}: {
+  table: Pick<EntityTable, "columns" | "setPref"> & { entity?: TableEntity };
+  settingsHref?: string;
+}) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const [search, setSearch] = useState("");
+  const rootRef = useRef<HTMLTableCellElement>(null);
+  const hidden = table.columns.filter((column) => column.hidden);
+  const filtered = hidden.filter((column) =>
+    column.label.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
+  const close = () => setAnchor(null);
+
+  return (
+    <th ref={rootRef} className="w-12 px-2 py-2 font-normal">
+      <button
+        type="button"
+        aria-label="Add or show fields"
+        aria-expanded={anchor !== null}
+        onClick={(event) =>
+          setAnchor(
+            anchor ? null : event.currentTarget.getBoundingClientRect(),
+          )
+        }
+        className={`flex h-7 w-7 items-center justify-center rounded text-lg leading-none transition-colors hover:bg-raised hover:text-white ${
+          anchor ? "bg-raised text-white" : "text-neutral-500"
+        }`}
+      >
+        +
+      </button>
+      {anchor ? (
+        <PortalMenu anchor={anchor} onClose={close} width={288} estimatedHeight={390}>
+          <input
+            autoFocus
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search fields"
+            className="w-full border-b border-edge bg-transparent px-3 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none"
           />
+          <div className="max-h-72 overflow-y-auto p-1">
+            {filtered.length > 0 ? (
+              filtered.map((column) => (
+                <button
+                  key={column.key}
+                  type="button"
+                  onClick={() => {
+                    table.setPref(column.key, { hidden: false });
+                    close();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-neutral-300 transition-colors hover:bg-raised hover:text-white"
+                >
+                  <span className="flex w-4 justify-center text-neutral-500">
+                    {column.custom ? ICONS.columns : ICONS.reset}
+                  </span>
+                  <span className="truncate">{column.label}</span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-4 text-sm text-neutral-500">
+                {hidden.length === 0 ? "All fields are visible" : "No fields found"}
+              </p>
+            )}
+          </div>
+          <div className="border-t border-edge p-1">
+            <Link
+              to={settingsHref}
+              onClick={close}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-neutral-300 transition-colors hover:bg-raised hover:text-white"
+            >
+              <span className="flex w-4 justify-center text-neutral-500">
+                {ICONS.reset}
+              </span>
+              Customize fields
+            </Link>
+          </div>
         </PortalMenu>
       ) : null}
     </th>
@@ -389,8 +524,10 @@ export function HeaderCell({
 // toggle, plus a reset action. Hidden custom fields come back from here.
 export function ColumnsButton({
   table,
+  menuAlign = "right",
 }: {
-  table: Pick<EntityTable, "columns" | "setPref" | "reset">;
+  table: Pick<EntityTable, "entity" | "columns" | "setPref" | "reset">;
+  menuAlign?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -398,6 +535,12 @@ export function ColumnsButton({
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[data-select-menu]")
+      ) {
+        return;
+      }
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
@@ -428,7 +571,11 @@ export function ColumnsButton({
         <span className="hidden sm:inline">Columns</span>
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-30 mt-1 max-h-80 w-64 overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-xl">
+        <div
+          className={`absolute top-full z-30 mt-1 max-h-80 w-64 overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-xl ${
+            menuAlign === "left" ? "left-0" : "right-0"
+          }`}
+        >
           {table.columns.map((column) => (
             <div
               key={column.key}
@@ -492,6 +639,163 @@ export function ColumnsButton({
   );
 }
 
+function slugFieldKey(label: string) {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+export function AddCustomFieldButton({
+  entity,
+  menuAlign = "right",
+}: {
+  entity: TableEntity;
+  menuAlign?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [type, setType] = useState<CustomFieldType>("text");
+  const [options, setOptions] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const createDefinition = useMutation(api.fields.createDefinition);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-select-menu]")
+      ) {
+        return;
+      }
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const createField = () => {
+    const trimmed = label.trim();
+    const parsedOptions =
+      customFieldNeedsOptions(type)
+        ? options
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : undefined;
+    if (!trimmed) return;
+    if (customFieldNeedsOptions(type) && (parsedOptions?.length ?? 0) === 0) {
+      setError("Add at least one option");
+      return;
+    }
+    void createDefinition({
+      entity,
+      key: slugFieldKey(trimmed),
+      label: trimmed,
+      type,
+      options: parsedOptions,
+      agentFilled: false,
+    })
+      .then(() => {
+        setOpen(false);
+        setLabel("");
+        setOptions("");
+        setType("text");
+        setError(null);
+      })
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : "Could not create field"),
+      );
+  };
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-label="Add custom field"
+        onClick={() => setOpen((value) => !value)}
+        className={`flex h-9 w-9 items-center justify-center rounded-md border border-edge text-lg leading-none transition-colors hover:border-edge-strong hover:text-white ${
+          open ? "text-white" : "text-neutral-400"
+        }`}
+      >
+        +
+      </button>
+      {open ? (
+        <div
+          className={`absolute top-full z-30 mt-1 w-72 rounded-md border border-edge bg-panel p-3 shadow-xl ${
+            menuAlign === "left" ? "left-0" : "right-0"
+          }`}
+        >
+          <h3 className="mb-3 text-sm font-medium text-white">
+            Add custom field
+          </h3>
+          <label className="mb-1 block text-xs text-neutral-500">Label</label>
+          <input
+            autoFocus
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && type !== "select") createField();
+            }}
+            placeholder="e.g. Renewal date"
+            className="mb-3 w-full rounded-md border border-edge bg-ink px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-accent focus:outline-none"
+          />
+          <label className="mb-1 block text-xs text-neutral-500">Type</label>
+          <Select
+            ariaLabel="Custom field type"
+            value={type}
+            onChange={(value) => setType(value as CustomFieldType)}
+            options={[...CUSTOM_FIELD_TYPES]}
+          />
+          {customFieldNeedsOptions(type) ? (
+            <div className="mt-3">
+              <label className="mb-1 block text-xs text-neutral-500">
+                Options, comma separated
+              </label>
+              <input
+                value={options}
+                onChange={(event) => setOptions(event.target.value)}
+                placeholder="Bronze, Silver, Gold"
+                className="w-full rounded-md border border-edge bg-ink px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-accent focus:outline-none"
+              />
+            </div>
+          ) : null}
+          {error ? <p className="mt-2 text-xs text-red-400">{error}</p> : null}
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md px-3 py-1.5 text-sm text-neutral-500 hover:bg-raised hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!label.trim()}
+              onClick={createField}
+              className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-ink disabled:opacity-40"
+            >
+              Add field
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // One custom-field cell. Click to edit in place; Enter or blur commits, and
 // Escape cancels. Select and date fields commit on pick.
 export function FieldCell({
@@ -535,6 +839,49 @@ export function FieldCell({
     );
   }
 
+  if (editing && definition.type === "multiSelect") {
+    const selected = new Set((value ?? "").split(",").filter(Boolean));
+    return (
+      <div className="min-w-40 rounded-md border border-edge bg-ink p-1">
+        {(definition.options ?? []).map((option) => (
+          <label
+            key={option}
+            className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs text-neutral-300 hover:bg-raised"
+          >
+            <Checkbox
+              checked={selected.has(option)}
+              ariaLabel={option}
+              onChange={(checked) => {
+                const next = new Set(selected);
+                if (checked) next.add(option);
+                else next.delete(option);
+                void commit([...next].join(","));
+              }}
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    );
+  }
+
+  if (editing && definition.type === "boolean") {
+    return (
+      <Select
+        size="sm"
+        ariaLabel={definition.label}
+        value={value ?? ""}
+        options={[
+          { value: "", label: "Not set" },
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ]}
+        onChange={(next) => void commit(next)}
+        className="min-w-28"
+      />
+    );
+  }
+
   if (editing && definition.type === "date") {
     return (
       <DateInput
@@ -546,11 +893,42 @@ export function FieldCell({
     );
   }
 
+  if (editing && definition.type === "dateTime") {
+    return (
+      <input
+        autoFocus
+        type="datetime-local"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit(draft)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit(draft);
+          if (e.key === "Escape") setEditing(false);
+        }}
+        className="w-full min-w-40 rounded border border-accent bg-ink px-1.5 py-0.5 text-sm text-white focus:outline-none"
+      />
+    );
+  }
+
   if (editing) {
     return (
       <input
         autoFocus
-        type={definition.type === "number" ? "number" : "text"}
+        type={
+          definition.type === "number" ||
+          definition.type === "currency" ||
+          definition.type === "rating"
+            ? "number"
+            : definition.type === "email"
+              ? "email"
+              : definition.type === "phone"
+                ? "tel"
+                : definition.type === "link"
+                  ? "url"
+                  : "text"
+        }
+        min={definition.type === "rating" ? 1 : undefined}
+        max={definition.type === "rating" ? 5 : undefined}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => void commit(draft)}
@@ -578,7 +956,7 @@ export function FieldCell({
             : "text-neutral-700"
       }`}
     >
-      {value || "—"}
+      {formatCustomFieldValue(definition.type, value) || "—"}
     </button>
   );
 }

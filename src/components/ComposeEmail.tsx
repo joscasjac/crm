@@ -46,12 +46,14 @@ export function ComposeEmail({
   defaultTo,
   companyId,
   contactId,
+  dealId,
 }: {
   open: boolean;
   onClose: () => void;
   defaultTo?: string;
   companyId?: Id<"companies">;
   contactId?: Id<"contacts">;
+  dealId?: Id<"deals">;
 }) {
   const capabilities = useQuery(api.capabilities.status);
   const provider = useQuery(api.email.provider);
@@ -210,6 +212,7 @@ export function ComposeEmail({
         body,
         companyId,
         contactId,
+        dealId,
         attachments,
       });
       setSent(true);

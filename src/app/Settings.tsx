@@ -2,6 +2,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   Avatar,
   Badge,
@@ -10,8 +11,10 @@ import {
   Input,
   PageHeader,
   Panel,
+  Select,
   TextLink,
 } from "../components/ui";
+import { CUSTOM_FIELD_TYPES, customFieldTypeLabel } from "../lib/customFields";
 import { NAV_ITEMS } from "./AppLayout";
 import { EntitySettingsSection } from "./EntitySettingsSection";
 
@@ -23,7 +26,11 @@ const SECTIONS = [
   { id: "companies", label: "Companies" },
   { id: "contacts", label: "Contacts" },
   { id: "deals", label: "Deals" },
+  { id: "projects", label: "Projects" },
+  { id: "tasks", label: "Tasks" },
+  { id: "customObjects", label: "Custom Objects" },
   { id: "integrations", label: "Integrations" },
+  { id: "codex", label: "Codex" },
   { id: "slack", label: "Slack" },
   { id: "email", label: "Email" },
   { id: "ai", label: "AI provider" },
@@ -37,7 +44,11 @@ const SUBTITLES: Record<SectionId, string> = {
   companies: "Defaults, columns, and custom fields for companies.",
   contacts: "Defaults, columns, and custom fields for contacts.",
   deals: "Defaults, columns, and custom fields for deals.",
+  projects: "Columns and custom fields for projects.",
+  tasks: "Columns and custom fields for tasks.",
+  customObjects: "Create objects, fields, and relationships.",
   integrations: "API keys and what each one enables.",
+  codex: "Connect Codex to CRM tools.",
   slack: "Notifications and the /crm bot, off by default.",
   email: "Provider, from identity, and signature.",
   ai: "Which model provider runs the chat surfaces.",
@@ -85,7 +96,13 @@ export function Settings() {
             <EntitySettingsSection entity="contact" />
           ) : null}
           {active === "deals" ? <EntitySettingsSection entity="deal" /> : null}
+          {active === "projects" ? (
+            <EntitySettingsSection entity="project" />
+          ) : null}
+          {active === "tasks" ? <EntitySettingsSection entity="task" /> : null}
+          {active === "customObjects" ? <CustomObjectsSection /> : null}
           {active === "integrations" ? <IntegrationsSection /> : null}
+          {active === "codex" ? <CodexSection /> : null}
           {active === "slack" ? <SlackSection /> : null}
           {active === "email" ? <EmailSection /> : null}
           {active === "ai" ? <AiSection /> : null}
@@ -104,9 +121,8 @@ function TeamSection() {
       <h3 className="mb-3 text-sm font-medium text-white">Team</h3>
       {demo?.demoMode ? (
         <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-200/90">
-          <span className="font-medium">Demo users.</span> Everyone below is
-          fake, seeded with the demo data. None of them can sign in or
-          receive email. Your fork starts with its own team list.
+          <span className="font-medium">Starter users.</span> These seeded
+          people give you something to explore before your real team signs in.
         </div>
       ) : null}
       <div className="flex flex-col gap-2">
@@ -120,11 +136,282 @@ function TeamSection() {
         ))}
       </div>
       <p className="mt-4 text-xs leading-relaxed text-neutral-600">
-        Sign-in is disabled on this demo. In a real install Convex Auth
-        handles sign-in and this table maps to authenticated users, with an
-        allow list that fails closed.
+        Convex Auth handles sign-in for real installs. This table maps to
+        authenticated users, with an allow list that fails closed.
       </p>
     </Panel>
+  );
+}
+
+function CustomObjectsSection() {
+  const objects = useQuery(api.customObjects.list);
+  const createObject = useMutation(api.customObjects.create);
+  const createField = useMutation(api.customObjects.createField);
+  const createRelationship = useMutation(api.customObjects.createRelationship);
+  const [objectName, setObjectName] = useState("");
+  const [pluralName, setPluralName] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedObjectId, setSelectedObjectId] =
+    useState<Id<"customObjects"> | "">("");
+  const selectedObject = objects?.find((item) => item._id === selectedObjectId);
+  const fields = useQuery(
+    api.customObjects.fields,
+    selectedObjectId ? { objectId: selectedObjectId } : "skip",
+  );
+  const relationships = useQuery(
+    api.customObjects.relationships,
+    selectedObjectId ? { objectId: selectedObjectId } : "skip",
+  );
+  const [fieldLabel, setFieldLabel] = useState("");
+  const [fieldType, setFieldType] =
+    useState<(typeof CUSTOM_FIELD_TYPES)[number]["value"]>("text");
+  const [fieldOptions, setFieldOptions] = useState("");
+  const [relationshipLabel, setRelationshipLabel] = useState("");
+  const [relationshipTarget, setRelationshipTarget] = useState<
+    "company" | "contact" | "deal" | "project" | "task" | "note" | "custom"
+  >("company");
+  const [relationshipTargetObjectId, setRelationshipTargetObjectId] =
+    useState<Id<"customObjects"> | "">("");
+  const [relationshipMany, setRelationshipMany] = useState(false);
+
+  const addObject = async () => {
+    const id = await createObject({
+      singularLabel: objectName,
+      pluralLabel: pluralName || undefined,
+      description: description || undefined,
+    });
+    setObjectName("");
+    setPluralName("");
+    setDescription("");
+    setSelectedObjectId(id);
+  };
+
+  const addField = async () => {
+    if (!selectedObjectId) return;
+    await createField({
+      objectId: selectedObjectId,
+      label: fieldLabel,
+      type: fieldType,
+      options:
+        fieldType === "select" || fieldType === "multiSelect"
+          ? fieldOptions
+              .split(",")
+              .map((option) => option.trim())
+              .filter(Boolean)
+          : undefined,
+    });
+    setFieldLabel("");
+    setFieldOptions("");
+  };
+
+  const addRelationship = async () => {
+    if (!selectedObjectId) return;
+    await createRelationship({
+      sourceObjectId: selectedObjectId,
+      label: relationshipLabel,
+      targetKind: relationshipTarget,
+      targetObjectId:
+        relationshipTarget === "custom" && relationshipTargetObjectId
+          ? relationshipTargetObjectId
+          : undefined,
+      many: relationshipMany,
+    });
+    setRelationshipLabel("");
+    setRelationshipTarget("company");
+    setRelationshipTargetObjectId("");
+    setRelationshipMany(false);
+  };
+
+  return (
+    <div className="grid gap-4">
+      <Panel className="p-4">
+        <h3 className="mb-3 text-sm font-medium text-white">Custom objects</h3>
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <Input
+            placeholder="Singular name, e.g. Subscription"
+            value={objectName}
+            onChange={(event) => setObjectName(event.target.value)}
+          />
+          <Input
+            placeholder="Plural, e.g. Subscriptions"
+            value={pluralName}
+            onChange={(event) => setPluralName(event.target.value)}
+          />
+          <Input
+            placeholder="Description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          <Button
+            variant="primary"
+            onClick={() => void addObject()}
+            disabled={!objectName.trim()}
+          >
+            Create
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-2">
+          {objects?.map((object) => (
+            <button
+              key={object._id}
+              type="button"
+              onClick={() => setSelectedObjectId(object._id)}
+              className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                selectedObjectId === object._id
+                  ? "border-accent bg-accent/10 text-white"
+                  : "border-edge text-neutral-300 hover:border-edge-strong"
+              }`}
+            >
+              <span className="font-medium">{object.pluralLabel}</span>
+              <span className="ml-2 text-xs text-neutral-500">
+                /app/objects/{object.key}
+              </span>
+            </button>
+          ))}
+          {objects?.length === 0 ? (
+            <p className="text-sm text-neutral-600">
+              No custom objects yet. Create one above.
+            </p>
+          ) : null}
+        </div>
+      </Panel>
+
+      {selectedObject ? (
+        <Panel className="p-4">
+          <h3 className="mb-3 text-sm font-medium text-white">
+            {selectedObject.pluralLabel} fields
+          </h3>
+          <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr_auto]">
+            <Input
+              placeholder="Field label"
+              value={fieldLabel}
+              onChange={(event) => setFieldLabel(event.target.value)}
+            />
+            <Select
+              ariaLabel="Field type"
+              value={fieldType}
+              onChange={(value) => setFieldType(value as typeof fieldType)}
+              options={CUSTOM_FIELD_TYPES.map((item) => ({
+                value: item.value,
+                label: item.label,
+              }))}
+            />
+            <Input
+              placeholder="Options, comma separated"
+              value={fieldOptions}
+              disabled={fieldType !== "select" && fieldType !== "multiSelect"}
+              onChange={(event) => setFieldOptions(event.target.value)}
+            />
+            <Button
+              variant="primary"
+              onClick={() => void addField()}
+              disabled={!fieldLabel.trim()}
+            >
+              Add field
+            </Button>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {fields?.map((field) => (
+              <div
+                key={field._id}
+                className="flex items-center justify-between rounded-md border border-edge px-3 py-2 text-sm"
+              >
+                <span className="text-neutral-200">{field.label}</span>
+                <span className="text-neutral-500">
+                  {customFieldTypeLabel(field.type)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
+
+      {selectedObject ? (
+        <Panel className="p-4">
+          <h3 className="mb-3 text-sm font-medium text-white">
+            {selectedObject.pluralLabel} relationships
+          </h3>
+          <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr_auto_auto]">
+            <Input
+              placeholder="Relationship label, e.g. Company"
+              value={relationshipLabel}
+              onChange={(event) => setRelationshipLabel(event.target.value)}
+            />
+            <Select
+              ariaLabel="Relationship target"
+              value={relationshipTarget}
+              onChange={(value) =>
+                setRelationshipTarget(value as typeof relationshipTarget)
+              }
+              options={[
+                { value: "company", label: "Company" },
+                { value: "contact", label: "Contact" },
+                { value: "deal", label: "Deal" },
+                { value: "project", label: "Project" },
+                { value: "task", label: "Task" },
+                { value: "note", label: "Note" },
+                { value: "custom", label: "Custom object" },
+              ]}
+            />
+            <Select
+              ariaLabel="Target custom object"
+              value={relationshipTargetObjectId}
+              onChange={(value) =>
+                setRelationshipTargetObjectId(value as Id<"customObjects">)
+              }
+              className={
+                relationshipTarget === "custom" ? "" : "pointer-events-none opacity-40"
+              }
+              options={[
+                { value: "", label: "Choose object" },
+                ...(objects ?? [])
+                  .filter((object) => object._id !== selectedObjectId)
+                  .map((object) => ({
+                    value: object._id,
+                    label: object.pluralLabel,
+                  })),
+              ]}
+            />
+            <label className="flex items-center gap-2 text-sm text-neutral-400">
+              <Checkbox
+                checked={relationshipMany}
+                onChange={setRelationshipMany}
+                ariaLabel="Allow many related records"
+              />
+              Many
+            </label>
+            <Button
+              variant="primary"
+              onClick={() => void addRelationship()}
+              disabled={
+                !relationshipLabel.trim() ||
+                (relationshipTarget === "custom" && !relationshipTargetObjectId)
+              }
+            >
+              Add
+            </Button>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {relationships?.map((relationship) => (
+              <div
+                key={relationship._id}
+                className="flex items-center justify-between rounded-md border border-edge px-3 py-2 text-sm"
+              >
+                <span className="text-neutral-200">{relationship.label}</span>
+                <span className="text-neutral-500">
+                  {relationship.many ? "Many" : "One"} {relationship.targetKind}
+                </span>
+              </div>
+            ))}
+            {relationships?.length === 0 ? (
+              <p className="text-sm text-neutral-600">
+                No relationships mapped yet.
+              </p>
+            ) : null}
+          </div>
+        </Panel>
+      ) : null}
+    </div>
   );
 }
 
@@ -240,6 +527,150 @@ function IntegrationsSection() {
           </TextLink>{" "}
           for when <Mono>--prod</Mono> matters.
         </p>
+      </Panel>
+    </div>
+  );
+}
+
+const CODEX_SCOPES = [
+  { id: "read", label: "Read CRM records" },
+  { id: "write_notes", label: "Create notes" },
+  { id: "write_tasks", label: "Create tasks" },
+  { id: "write_deals", label: "Move deals" },
+] as const;
+
+type CodexScope = (typeof CODEX_SCOPES)[number]["id"];
+
+function CodexSection() {
+  const tokens = useQuery(api.codexApi.listTokens);
+  const createToken = useAction(api.codexApi.createToken);
+  const revokeToken = useMutation(api.codexApi.revokeToken);
+  const [name, setName] = useState("Codex desktop");
+  const [scopes, setScopes] = useState<CodexScope[]>(
+    CODEX_SCOPES.map((scope) => scope.id),
+  );
+  const [created, setCreated] = useState<{
+    token: string;
+    lastFour: string;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const activeTokens = tokens?.filter((token) => !token.revokedAt) ?? [];
+  const baseUrl =
+    typeof window === "undefined" ? "https://your-deployment.convex.site" : window.location.origin;
+
+  const toggleScope = (scope: CodexScope) => {
+    setScopes((current) =>
+      current.includes(scope)
+        ? current.filter((item) => item !== scope)
+        : [...current, scope],
+    );
+  };
+
+  const generate = async () => {
+    if (scopes.length === 0) return;
+    setBusy(true);
+    try {
+      const result = await createToken({ name, scopes });
+      setCreated({ token: result.token, lastFour: result.lastFour });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Panel className="p-4">
+        <h3 className="mb-1 text-sm font-medium text-white">
+          Codex connector
+        </h3>
+        <p className="mb-4 text-xs leading-relaxed text-neutral-500">
+          Generate a scoped bearer token for the local Codex CRM plugin. The
+          token is shown once; the CRM stores only a hash and logs every tool
+          call to Activity.
+        </p>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Token name"
+          />
+          <Button
+            variant="primary"
+            disabled={busy || scopes.length === 0}
+            onClick={() => void generate()}
+          >
+            Generate token
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {CODEX_SCOPES.map((scope) => (
+            <label
+              key={scope.id}
+              className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300"
+            >
+              <Checkbox
+                checked={scopes.includes(scope.id)}
+                ariaLabel={scope.label}
+                onChange={() => toggleScope(scope.id)}
+              />
+              {scope.label}
+            </label>
+          ))}
+        </div>
+        {created ? (
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="mb-2 text-xs font-medium text-amber-200">
+              Copy this token now. It will not be shown again.
+            </p>
+            <CommandBlock>{created.token}</CommandBlock>
+          </div>
+        ) : null}
+      </Panel>
+
+      <Panel className="p-4">
+        <h3 className="mb-1 text-sm font-medium text-white">
+          Plugin configuration
+        </h3>
+        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+          The local plugin reads these values from its environment.
+        </p>
+        <CommandBlock>{`CRM_BASE_URL=${baseUrl}
+CRM_TOKEN=${created?.token ?? "crm_your_token_from_above"}`}</CommandBlock>
+      </Panel>
+
+      <Panel className="p-4">
+        <h3 className="mb-3 text-sm font-medium text-white">API tokens</h3>
+        <div className="flex flex-col gap-2">
+          {tokens === undefined ? (
+            <p className="text-sm text-neutral-500">Loading tokens...</p>
+          ) : activeTokens.length === 0 ? (
+            <p className="text-sm text-neutral-500">No active tokens.</p>
+          ) : (
+            activeTokens.map((token) => (
+              <div
+                key={token._id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-edge bg-ink px-3 py-2"
+              >
+                <div>
+                  <p className="text-sm text-white">{token.name}</p>
+                  <p className="text-xs text-neutral-500">
+                    Ends in {token.lastFour} · {token.scopes.join(", ")}
+                    {token.lastUsedAt
+                      ? ` · used ${new Date(token.lastUsedAt).toLocaleString()}`
+                      : " · never used"}
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  onClick={() => void revokeToken({ tokenId: token._id })}
+                >
+                  Revoke
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
       </Panel>
     </div>
   );
@@ -391,8 +822,8 @@ function SlackSection() {
       <Panel className="p-4">
         <h3 className="mb-1 text-sm font-medium text-white">What posts</h3>
         <p className="mb-3 text-xs leading-relaxed text-neutral-500">
-          Each event type has its own switch. Demo mode never posts; every
-          send and skip shows on the Activity page.
+          Each event type has its own switch. Every send and skip shows on the
+          Activity page.
         </p>
         <div className="flex flex-col gap-2.5">
           <SlackToggle

@@ -26,12 +26,28 @@ export function Dashboard() {
           value={summary ? String(summary.openDealCount) : "…"}
         />
         <Stat
-          label="Closed won"
-          value={summary ? formatMoney(summary.wonMinor, "USD") : "…"}
-        />
-        <Stat
           label="Companies"
           value={summary ? String(summary.companyCount) : "…"}
+        />
+        <Stat
+          label="Active projects"
+          value={summary ? String(summary.projectCount) : "…"}
+        />
+        <Stat
+          label="Open tasks"
+          value={summary ? String(summary.openTaskCount) : "…"}
+        />
+        <Stat
+          label="Overdue tasks"
+          value={summary ? String(summary.overdueTaskCount) : "…"}
+        />
+        <Stat
+          label="Contacts"
+          value={summary ? String(summary.contactCount) : "…"}
+        />
+        <Stat
+          label="Closed won"
+          value={summary ? formatMoney(summary.wonMinor, "USD") : "…"}
         />
       </div>
 
