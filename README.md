@@ -50,8 +50,8 @@ Package manager is npm. There is no monorepo; `convex/` is the backend, `src/` i
 ## Quick start
 
 ```bash
-git clone https://github.com/waynesutton/trycrm-convex.git
-cd trycrm-convex
+git clone https://github.com/joscasjac/crm.git
+cd crm
 npm install
 npx convex dev
 ```
