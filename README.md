@@ -1,146 +1,228 @@
-<h1 align="center">The Open Source Agent CRM on Convex</h1>
+<h1 align="center">An Open Source Full Featured CRM Using Convex</h1>
 
 <p align="center">
-  <strong>The open source agentic CRM, ported to run entirely on Convex.</strong><br>
-  One deployment is the database, the agent runtime, the work queue, the cron scheduler, the file store, and the web host.
+  A full featured CRM built on Convex, with companies, contacts, deals, projects, tasks, notes, custom objects, saved views, timelines, AI agents, email, Slack, and real-time collaboration patterns in one deployment.
 </p>
 
 <p align="center">
   <a href="https://convex.link/crmonconvex"><strong>Live demo</strong></a> ·
-  <a href="#what-changed-in-this-fork"><strong>What changed</strong></a> ·
-  <a href="#how-it-works"><strong>How it works</strong></a> ·
+  <a href="#what-this-repo-is"><strong>Overview</strong></a> ·
+  <a href="#features"><strong>Features</strong></a> ·
+  <a href="#architecture"><strong>Architecture</strong></a> ·
   <a href="#quick-start"><strong>Quick start</strong></a> ·
   <a href="#configuration"><strong>Configuration</strong></a> ·
-  <a href="#email-two-providers"><strong>Email</strong></a> ·
-  <a href="#deploying-to-convex-cloud"><strong>Deploying</strong></a> ·
-  <a href="#turning-off-the-demo-reset"><strong>Forking</strong></a> ·
-  <a href="#how-it-compares-to-upstream"><strong>Compare</strong></a>
+  <a href="#deployment"><strong>Deployment</strong></a>
 </p>
 
-## What this is
+## What this repo is
 
-This is a port of [trycompai/crm](https://github.com/trycompai/crm) that replaces the entire infrastructure with a single [Convex](https://convex.dev) deployment. The product carried over intact: durable research agents that enrich companies and contacts, an evidence ledger where nothing about a person is guessed, rechecks that require a stated reason, agents that build agents, and record chat that reads your own history and shows its working.
+This is an open source CRM where Convex is the backend, database, realtime sync layer, job queue, cron runner, file store, agent runtime, and web host.
 
-What changed is everything underneath. No Vercel, no Postgres, no Prisma, no Redis, no separate API server, no Better Auth. The frontend is a Vite React app served by the Convex static hosting component from the same deployment that runs the backend.
+The app is designed around one idea: every CRM object should work the same way. Companies, contacts, deals, projects, tasks, notes, and custom objects all move toward the same workspace model:
 
-Try it at [convex.link/crmonconvex](https://convex.link/crmonconvex) (served from [good-dog-8.convex.site](https://good-dog-8.convex.site/)). The demo runs in demo mode: everything works in real time, content resets every 10 minutes with a Convex cron job, and auth and email are intentionally not configured. The site has a full setup and usage guide at `/docs`, written for people who have never deployed a backend.
+- a default locked table view
+- user-created saved views
+- table, kanban, and calendar layouts
+- reusable column controls
+- custom fields
+- multi-select and bulk actions
+- CSV import and export
+- right-side record panels
+- timelines, tasks, notes, emails, and related records
 
-## What changed in this fork
+That gives the repo a clear product architecture. Adding a new object should not mean rebuilding table menus, filters, kanban, import/export, side panels, or record activity from scratch.
 
-This fork is no longer only an infrastructure port. The new code turns the CRM into a Convex-native object workspace: every record type is meant to share the same table, view, side-panel, custom-field, import/export, and bulk-action architecture.
+This project started as a Convex port of [trycompai/crm](https://github.com/trycompai/crm), but the current repo adds a larger object-workspace layer on top of the original sales CRM and agent features.
 
-That matters because a CRM stops scaling as a product when every object has its own special page. If Companies has one table, Deals has another, Tasks has a third, and custom objects have a fourth, every improvement has to be rebuilt four times. The 17k+ lines added here are mostly the work of pulling those patterns into reusable backend models and frontend components so new CRM objects can inherit the same behavior.
+## Features
 
-The most important additions are:
+### CRM records
 
-| Area | What was added | Why it is useful |
-| --- | --- | --- |
-| Object workspace | Shared table chrome, view selector, toolbar, row selection, create button, record side panel, and options menu patterns | Companies, contacts, deals, projects, tasks, notes, and custom objects can behave like one product instead of separate screens |
-| Saved views | Per-object saved views with a locked default view and user-created table, kanban, and calendar views | Users can create alternate views without changing the sidebar or overwriting the default table |
-| Universal kanban/calendar | `ObjectViews` can render records as kanban or calendar from saved-view configuration | Any object with a usable option/date field can get a board or calendar view, not only deals |
-| Shared tables | Reusable table infrastructure for column menus, hide/show, move left/right, inline editing, custom fields, multi-select, and CSV import/export | A table feature can be implemented once and reused across all objects |
-| Work objects | Projects, tasks, and notes were promoted into first-class objects | Work management now lives in the same CRM data model as sales records |
-| Notes object | Notes can be opened from the sidebar and edited like records, while still linking back to CRM entities | Notes are not trapped inside one record timeline |
-| Custom objects | User-defined objects, fields, records, and relationship definitions were added | The CRM can model customer-specific workflows beyond companies, contacts, and deals |
-| Record side panels | A common side panel supports Home, Timeline, Tasks, Notes, Emails, favorites, and record actions | Users can create or inspect a record without losing their place in the table or board |
-| Activity and timeline | Timelines can be scoped to the highlighted record, and workspace activity can aggregate across records | Record history becomes navigable instead of being a short fixed preview |
-| Access and deployment | Read/write access helpers, Convex Auth wiring points, public-demo mode, and optional integration keys | The app can be public-demo friendly while still having a clear path to private CRM use |
+- Companies
+- Contacts
+- Deals and pipeline stages
+- Projects
+- Tasks
+- Notes
+- Custom objects
+- Custom fields on built-in objects
+- Relationship mapping for custom objects
+- Favorites and trash flows
 
-The design direction is intentionally Airtable/Notion-like: objects have stable default views, users add more views when needed, and the object page stays the place where the work happens. A kanban view should be a view of Tasks or Companies, not a new sidebar destination.
+### Views
 
-## How it works
+- Locked default table views
+- User-created saved views
+- Table views
+- Kanban views grouped by usable option fields
+- Calendar views grouped by usable date fields
+- Per-object view selectors
+- View configuration stored in Convex
 
-The app is built around one metadata-driven loop:
+Saved views belong to the object. Creating a kanban view for Tasks should add it under the Tasks view selector, not as a new sidebar item.
 
-1. An object has records in Convex.
-2. The object exposes a default locked table view.
-3. Users can add saved views for the same object.
-4. A saved view chooses a type: table, kanban, or calendar.
-5. The same record set renders through shared React components.
-6. Opening a record shows the shared side panel for fields, timeline, tasks, notes, and email.
+### Tables
 
-### Backend Model
+- Shared table chrome across object pages
+- Column hide/show
+- Move column left/right
+- Header action menus
+- Inline editing
+- Custom field columns
+- Row selection
+- Multi-select actions
+- Inline add rows
+- CSV import
+- CSV export
 
-`convex/schema.ts` defines the built-in CRM records and the metadata that makes them extensible:
+The goal is one reusable table foundation for all objects, rather than separate one-off tables for companies, deals, projects, and tasks.
 
-- `companies`, `contacts`, and `deals` hold sales records.
-- `projects` and `projectTasks` hold delivery and work-management records.
-- `activities` stores timeline entries, notes, tasks, reminders, and email history.
-- `fieldDefinitions` and `fieldValues` store custom fields for built-in objects.
-- `savedViews` stores per-object table, kanban, and calendar views.
-- `customObjects`, `customObjectFields`, `customObjectRecords`, and relationship tables store user-created objects and links between records.
-- `favorites` and trash-related flows support workspace-level record actions.
+### Kanban and calendar
 
-Convex queries read through indexes and stream live results to React. Mutations go through `writeMutation`, which centralizes access checks before data changes. Actions handle external work such as AI providers, enrichment, email, Slack, web search, and scraping.
+- Deals use a stage board by default
+- Other objects can create kanban views from option fields
+- Calendar views use date fields
+- Kanban cards open the same record side panel as table rows
+- New records can be created from the relevant column context
+- Kanban summaries can calculate counts, percentages, dates, and numeric totals
 
-### Frontend Model
+### Record side panels
 
-The frontend is being organized around reusable object components:
+Records open in a right-side panel so users can keep their place in the table, board, or calendar.
 
-- `ObjectTableChrome` renders the object header, selected count, create action, view bar, and right-side options panel.
-- `SavedViewButton` owns the locked default view, saved-view dropdown, create-view flow, view type, and kanban grouping field.
-- `dataTable` owns the table mechanics: column menus, sorting affordances, move left/right, hide/show, sticky columns, custom-field columns, inline editing, and custom-field creation.
-- `ObjectDataTable` provides a reusable selectable table for newer object pages such as Notes and Custom Objects.
-- `ObjectViews` renders kanban and calendar views from the same records and saved-view configuration.
-- `RecordSidePanel`, `Timeline`, and `ComposeEmail` provide the shared record-detail workflow.
-- `csv.ts`, `tableFilters.tsx`, and `interaction.ts` hold shared import/export, filtering, and click-behavior utilities.
+Panels support:
 
-The intended user flow is:
+- Home fields
+- Timeline
+- Tasks
+- Notes
+- Emails
+- Related records
+- Favorite actions
+- Record actions
 
-1. Pick an object from the sidebar.
-2. Use the view selector to stay on the default table or open a saved view.
-3. Work in table, kanban, or calendar without leaving that object.
-4. Create records from the top button into the right side panel, or inline from the table/kanban where context matters.
-5. Edit fields, assign people, create tasks, write notes, send email, and inspect timeline history from the same record panel.
+Task creation belongs in the Tasks tab. Note creation belongs in the Notes tab. Timeline is for activity history.
 
-### Custom Objects And Relationships
+### Agent and AI features
 
-Custom objects use the same idea as built-in objects. A custom object has:
+- Company and contact enrichment
+- Evidence ledger for facts
+- Rechecks with required reasons
+- Record chat with CRM context
+- Workspace Ask chat
+- AI provider picker
+- Agent builder
+- Agent task queue with leases and workpools
+- Optional web search and web page reading tools
 
-- A definition row that names the object and controls how it appears.
-- Field definitions for the object's schema.
-- Record rows with field values.
-- Relationship definitions that describe how this object connects to other objects.
-- Relationship rows that link specific records.
+AI features are optional. If a provider key is missing, the app reports the missing key instead of crashing.
 
-That means a workspace can add something like Vendors, Properties, Candidates, Renewals, or Onboarding Plans without adding a new hardcoded page for each one. The object workspace supplies the table, views, side panel, field editing, and relationship surface.
+### Integrations
 
-### Performance Model
+- Email through Resend or AgentMail
+- Compose window with attachments
+- Email activity logging
+- Slack notifications
+- Slack `/crm` command routes
+- Firecrawl, Exa, or Context.dev for web research
 
-The architecture is intended to handle thousands of records per object by keeping heavy work out of React render loops:
+All external services are optional and configured through Convex environment variables.
 
-- List pages use Convex queries and pagination instead of loading every record into the browser.
-- Queries should read through indexes; new filters should get schema indexes instead of client-side full scans.
-- Custom field values are fetched in batches for the records visible in the current table page.
-- Saved views store configuration, not duplicated record sets.
-- Kanban and calendar views derive from the same object data and should update records through the object mutation layer.
-- Bulk work and import/export should run in batches so 5k-record objects stay responsive.
+## Architecture
 
-The current repo is still moving toward total uniformity, but this is the architecture the new code establishes: one object system, one view system, one record panel, one table foundation, and one Convex backend to keep it live.
+This is a single npm project:
 
-## The stack
+```text
+convex/   Backend functions, schema, actions, crons, agents, and HTTP routes
+src/      React frontend, routes, shared components, object workspaces
+public/   Static assets used by the app and landing page
+docs/     Product docs, planning notes, and upstream reference material
+prds/     Feature specs and design intent
+adrs/     Architecture decisions
+```
 
-| Layer            | Technology                                                                                                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend          | Convex functions, TypeScript end to end                                                                                                                                             |
-| Database         | Convex database with typed schema and indexes                                                                                                                                       |
-| Frontend         | React 19, Vite, React Router, Tailwind CSS 4 (dark and light themes)                                                                                                                |
-| Hosting          | [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting) serving the built app                                                                              |
-| Agent runtime    | [`@convex-dev/agent`](https://www.convex.dev/components/agent) with tools, threads, and message history                                                                             |
-| Work queues      | [`@convex-dev/workpool`](https://www.convex.dev/components/workpool), three pools so slow work cannot starve the dispatcher                                                         |
-| Brand enrichment | [`@context-dot-dev/convex`](https://www.convex.dev/components/context-dot-dev/convex), the same Context.dev data the upstream uses; the same key also backs web search and scraping |
-| Web scraping     | [`@firecrawl/firecrawl-convex`](https://www.convex.dev/components/firecrawl/firecrawl-convex) or Context.dev, the chat agent reads pages as markdown with either key                |
-| Web search       | [`@exalabs/convex-exa`](https://www.convex.dev/components/exalabs/convex-exa) or Context.dev, search as an agent tool with either key                                               |
-| AI providers     | OpenAI, Claude (Anthropic), OpenRouter, DeepSeek, or Grok (xAI) via the AI SDK, switchable in Settings, no key ships by default                                                     |
-| Email            | [`@convex-dev/resend`](https://www.convex.dev/components/resend) or [`@agentmail/convex`](https://www.convex.dev/components/agentmail/convex), switchable in Settings               |
-| Caching          | [`@convex-dev/action-cache`](https://www.convex.dev/components/action-cache), 7 day TTL on brand lookups, replaces Redis                                                            |
-| Rate limiting    | [`@convex-dev/rate-limiter`](https://www.convex.dev/components/rate-limiter) on the enrichment budget                                                                               |
-| Rollups          | [`@convex-dev/aggregate`](https://www.convex.dev/components/aggregate) for pipeline value by stage and owner                                                                        |
-| Scheduling       | Convex cron jobs plus [`@convex-dev/crons`](https://www.convex.dev/components/crons)                                                                                                |
-| Durability       | [`@convex-dev/workflow`](https://www.convex.dev/components/workflow) and [`@convex-dev/action-retrier`](https://www.convex.dev/components/retrier)                                  |
-| Migrations       | [`@convex-dev/migrations`](https://www.convex.dev/components/migrations)                                                                                                            |
+There is no separate API server, no Postgres, no Redis, no Prisma, no Vercel service, and no monorepo. Convex owns the backend and can also host the frontend.
 
-Package manager is npm. There is no monorepo; `convex/` is the backend, `src/` is the frontend.
+### Backend
+
+The Convex schema contains both records and metadata:
+
+- `companies`, `contacts`, `deals`
+- `projects`, `projectTasks`
+- `activities`
+- `fieldDefinitions`, `fieldValues`
+- `savedViews`
+- `customObjects`, `customObjectFields`, `customObjectRecords`
+- custom object relationship tables
+- agent task, run, chat, fact, log, Slack, and workspace settings tables
+
+Queries read indexed data and stream updates to React. Mutations use shared access wrappers before writes. Actions handle slower or external work such as AI calls, enrichment, scraping, search, Slack, and email.
+
+Important backend files:
+
+- `convex/schema.ts` defines the database.
+- `convex/model/functions.ts` wraps reads and writes with access checks.
+- `convex/model/access.ts` is where auth rules are centralized.
+- `convex/companies.ts`, `contacts.ts`, `deals.ts`, `projects.ts`, `tasks.ts`, and `notes.ts` expose object APIs.
+- `convex/customObjects.ts` powers user-created objects and relationships.
+- `convex/savedViews.ts` stores object view configuration.
+- `convex/activities.ts` powers timelines, tasks, notes, reminders, and activity feeds.
+- `convex/agentTasks.ts`, `agents.ts`, `chat.ts`, and `ask.ts` power agent workflows.
+- `convex/email.ts`, `slack.ts`, and `web.ts` handle optional integrations.
+
+### Frontend
+
+The React app is organized around reusable object UI:
+
+- `src/components/ObjectTableChrome.tsx` renders the object page header, actions, selected state, and options panel.
+- `src/components/SavedViewButton.tsx` renders the locked default view, saved view dropdown, and create-view flow.
+- `src/components/dataTable.tsx` contains shared table behavior.
+- `src/components/ObjectDataTable.tsx` provides a generic selectable object table.
+- `src/components/ObjectViews.tsx` renders kanban and calendar views.
+- `src/components/RecordSidePanel.tsx` renders shared record details.
+- `src/components/Timeline.tsx` renders record activity.
+- `src/components/ComposeEmail.tsx` renders the email composer.
+- `src/lib/customFields.ts`, `columns.ts`, `csv.ts`, and `tableFilters.tsx` hold shared object utilities.
+
+Object pages live under `src/app/`:
+
+- `Companies.tsx`
+- `Contacts.tsx`
+- `Deals.tsx`
+- `Projects.tsx`
+- `Tasks.tsx`
+- `Notes.tsx`
+- `CustomObjectPage.tsx`
+- `WorkspaceTimeline.tsx`
+- `Ask.tsx`
+- `Activity.tsx`
+- `Agents.tsx`
+- `Settings.tsx`
+
+## How records flow through the app
+
+1. The user opens an object from the sidebar.
+2. The page loads records from Convex.
+3. The default locked table view is selected unless a saved view is chosen.
+4. The selected view decides whether records render as a table, kanban board, or calendar.
+5. The user can create, edit, select, import, export, or open records.
+6. Opening a record shows the shared side panel.
+7. Field edits, notes, tasks, emails, and timeline events write back through Convex mutations.
+8. Convex pushes updates live to every subscribed client.
+
+## Scaling model
+
+The repo is designed so objects with thousands of records can stay usable:
+
+- list queries should be paginated
+- filters should be backed by indexes where possible
+- table pages should only hydrate visible rows
+- custom field values are batched for the visible records
+- saved views store configuration, not duplicate record copies
+- bulk actions and imports should process records in batches
+- slow external work runs through actions, queues, workpools, and retries
+
+Convex handles realtime subscriptions and server-side consistency. The frontend should not try to load an entire large object into memory just to render one table page.
 
 ## Quick start
 
@@ -151,7 +233,21 @@ npm install
 npx convex dev
 ```
 
-The first `npx convex dev` walks you through creating a free Convex project. It will ask for three required environment variables before the first push:
+In a second terminal:
+
+```bash
+npm run dev:frontend
+```
+
+Or run both together:
+
+```bash
+npm run dev
+```
+
+Open the localhost URL printed by Vite.
+
+The first Convex push asks for required environment variables declared by installed Convex components. You can run the app without vendor keys by setting them to `unset`:
 
 ```bash
 npx convex env set CONTEXT_DEV_API_KEY unset
@@ -159,90 +255,64 @@ npx convex env set FIRECRAWL_API_KEY unset
 npx convex env set EXA_API_KEY unset
 ```
 
-The literal string `unset` is the documented sentinel for running without vendor keys. Each feature reports that it is not configured instead of failing. Put real keys there whenever you have them; the features switch on immediately, no redeploy needed.
-
-Then, in a second terminal:
-
-```bash
-npm run dev:frontend
-```
-
-Open the printed localhost URL. The app seeds itself with demo data on first visit. Or run both together:
-
-```bash
-npm run dev
-```
-
-Prefer letting a coding agent do this? The landing page has a "Copy the setup prompt" button that hands the exact instructions to Cursor, Codex, Claude Code, or whatever you use.
-
 ## Configuration
 
-Every outside key is optional in practice. The app degrades honestly: features that need a key say so instead of pretending.
+Most integrations are optional. Missing keys disable the related feature cleanly.
 
-| Variable                                   | What it enables                                                                                                                              | Without it                                                                             |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `CONTEXT_DEV_API_KEY`                      | Company enrichment from Context.dev brand data, plus web search and page reading for the chat agent when the Exa or Firecrawl key is missing | Enrichment tasks complete with a "not configured" note. Set to `unset` to run keyless. |
-| `FIRECRAWL_API_KEY`                        | Chat agent reads web pages via Firecrawl. Context.dev covers this when only its key is set                                                   | The tool tells the agent which keys enable it. Set to `unset` to run keyless.          |
-| `EXA_API_KEY`                              | Chat agent searches the web via Exa. Context.dev covers this when only its key is set                                                        | Same honest degradation. Set to `unset` to run keyless.                                |
-| `OPENAI_API_KEY`                           | Chat and agent reasoning when OpenAI is the selected provider                                                                                | Chat replies name the missing key                                                      |
-| `ANTHROPIC_API_KEY`                        | Chat and agent reasoning when Claude is the selected provider                                                                                | Same                                                                                   |
-| `OPENROUTER_API_KEY`                       | Chat and agent reasoning when OpenRouter is the selected provider                                                                            | Same                                                                                   |
-| `DEEPSEEK_API_KEY`                         | Chat and agent reasoning when DeepSeek is the selected provider                                                                              | Same                                                                                   |
-| `XAI_API_KEY`                              | Chat and agent reasoning when Grok (xAI) is the selected provider                                                                            | Same                                                                                   |
-| `RESEND_API_KEY`                           | Outbound email through the Resend component                                                                                                  | Email sends are logged as no-ops                                                       |
-| `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID` | Outbound email plus a persistent agent inbox through AgentMail                                                                               | Same, logged as no-ops                                                                 |
-| `SLACK_WEBHOOK_URL`                        | Slack notifications in simple mode: posts to one fixed channel through an incoming webhook                                                   | Slack sends are logged as no-ops                                                       |
-| `SLACK_BOT_TOKEN`                          | Slack notifications in full mode: the channel picker in Settings and the `/crm` bot                                                          | Same, logged as no-ops                                                                 |
-| `SLACK_SIGNING_SECRET`                     | Verifies inbound Slack slash commands for the `/crm` bot                                                                                     | Bot routes answer 503; notifications unaffected                                        |
-| `APP_URL`                                  | Overrides the base URL in Slack deep links, for custom domains                                                                               | Links use the `.convex.site` URL                                                       |
-| `FIRECRAWL_WEBHOOK_SECRET`                 | Verifies Firecrawl crawl webhooks                                                                                                            | Optional; only needed for webhook-mode crawls                                          |
-| `AGENTMAIL_WEBHOOK_SECRET`                 | Verifies inbound AgentMail webhooks                                                                                                          | Optional; unverified deliveries are rejected                                           |
+| Variable | Enables |
+| --- | --- |
+| `CONTEXT_DEV_API_KEY` | Context.dev enrichment, search fallback, page reading fallback |
+| `FIRECRAWL_API_KEY` | Web page reading |
+| `EXA_API_KEY` | Web search |
+| `OPENAI_API_KEY` | OpenAI chat and agent reasoning |
+| `ANTHROPIC_API_KEY` | Claude chat and agent reasoning |
+| `OPENROUTER_API_KEY` | OpenRouter chat and agent reasoning |
+| `DEEPSEEK_API_KEY` | DeepSeek chat and agent reasoning |
+| `XAI_API_KEY` | Grok chat and agent reasoning |
+| `RESEND_API_KEY` | Outbound email through Resend |
+| `AGENTMAIL_API_KEY` | Outbound email through AgentMail |
+| `AGENTMAIL_INBOX_ID` | AgentMail inbox identity |
+| `AGENTMAIL_WEBHOOK_SECRET` | AgentMail inbound webhook verification |
+| `SLACK_WEBHOOK_URL` | Slack webhook notifications |
+| `SLACK_BOT_TOKEN` | Slack bot notifications and channel picker |
+| `SLACK_SIGNING_SECRET` | Slack slash command verification |
+| `APP_URL` | Public base URL used in deep links |
 
-Set any of them with:
+Set values with:
 
 ```bash
 npx convex env set OPENAI_API_KEY sk-...
 ```
 
-None of the five AI keys ship by default. A fresh fork has no model keys at all; the Ask page and record chat answer with the exact key they need instead of erroring. Pick which provider the chat uses in Settings. OpenAI is the default.
-
-Demo mode is a flag on the workspace row, set by the seed. While it is on, writes are open, sign-in is disabled, and the reset cron wipes and reseeds all tables every 10 minutes. The banner in the app counts down to the next reset. Forking this for real use? Turn it off first: see [Turning off the demo reset](#turning-off-the-demo-reset).
-
-## Email: two providers
-
-Notifications route through one of two components, and Settings has a toggle to pick which:
-
-- **Resend** is plain outbound email. One key: `RESEND_API_KEY`.
-- **AgentMail** sends too, and also gives agents a persistent inbox: threads, labels, and delivery status sync into Convex tables reactively. Two values: `AGENTMAIL_API_KEY` and `AGENTMAIL_INBOX_ID`. For inbound mail, register `https://YOUR-DEPLOYMENT.convex.site/agentmail/webhook` in the AgentMail dashboard and set `AGENTMAIL_WEBHOOK_SECRET`.
-
-Both can hold keys at the same time; the toggle decides which one sends. With neither configured, sends are logged instead of failing, which is how the public demo runs.
-
-## Slack: notifications and the /crm bot
-
-> **Untested.** Built against Slack's current API docs but not yet run against a live Slack workspace. The Activity page logs every send, skip, and failure; start there if something misbehaves, and open an issue if you hit a bug.
-
-Off by default. Turn it on in Settings, Slack, then connect one of two modes. Dev and production keep separate env vars, so run each `npx convex env set` command twice if you deployed: once for dev, once with `--prod`.
-
-- **Webhook mode** posts CRM events to one fixed channel. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps), enable [Incoming Webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/), pick a channel, and set `SLACK_WEBHOOK_URL`. Two minutes, no scopes.
-- **Bot mode** lets you search and pick the channel from Settings and enables the `/crm` slash command. Add the `chat:write`, `channels:read`, `users:read`, and `users:read.email` [bot scopes](https://docs.slack.dev/reference/scopes) (plus `groups:read` for private channels), install the app, and set `SLACK_BOT_TOKEN`. Invite the bot to the channel with `/invite @your-bot-name`.
-
-What posts, each behind its own toggle: new companies and contacts, new deals and stage changes, task completions, and agent run summaries. Every message includes an Open in CRM link. Deliveries retry with backoff through the [action retrier component](https://www.convex.dev/components/retrier); demo mode never posts, and every send or skip shows on the Activity page.
-
-The `/crm` bot needs two more things: `SLACK_SIGNING_SECRET` (from your Slack app's Basic Information page) and a [slash command](https://docs.slack.dev/interactivity/implementing-slash-commands/) pointed at `https://YOUR-DEPLOYMENT.convex.site/webhooks/slack/commands`. Then flip the bot switch in Settings, Slack. Commands: `/crm find`, `/crm deal <name> <stage>`, `/crm note`, `/crm task`, `/crm activity`, `/crm help`. Every request is verified with Slack's [signed secrets scheme](https://docs.slack.dev/authentication/verifying-requests-from-slack/), and only workspace members (matched by Slack profile email against the Team list, or an allowed domain) can act. The full walkthrough lives on the `/docs` page of your deployment.
-
-## Linting and helpers
-
-The repo uses the [Convex ESLint plugin](https://docs.convex.dev/eslint) with type aware linting. It enforces argument validators, explicit table names in `db.get`, `db.patch`, `db.replace`, and `db.delete`, warns on `.filter()` in queries, and keeps cron jobs off the top of the hour.
+For production, add `--prod`:
 
 ```bash
-npm run lint
+npx convex env set OPENAI_API_KEY sk-... --prod
 ```
 
-Write access runs through one wrapper built on [`convex-helpers`](https://github.com/get-convex/convex-helpers): `writeMutation` in `convex/model/functions.ts` calls the access check before every mutation handler. That is the Convex pattern for row level security. When you wire real auth, `convex/model/access.ts` is the only file that changes.
+## Demo mode
 
-## Deploying to Convex cloud
+The public demo runs with demo mode enabled. In demo mode:
 
-One deployment serves the backend and the site. Before the first production deploy, set the required env vars on production. They are separate from dev, so the values you set during setup do not carry over, and the push fails with `MissingEnvironmentVariables` without them:
+- writes are open
+- auth is disabled
+- seeded demo data resets every 10 minutes
+- external services are usually unset
+
+For a real CRM workspace, disable demo mode before entering real data:
+
+```bash
+npx convex run demo:disableDemoMode
+npx convex run demo:disableDemoMode --prod
+```
+
+Then remove the demo reset cron from `convex/crons.ts`. Keep the agent tick cron.
+
+## Deployment
+
+One Convex deployment can serve the backend and frontend.
+
+Before deploying, set required production variables:
 
 ```bash
 npx convex env set CONTEXT_DEV_API_KEY unset --prod
@@ -250,100 +320,33 @@ npx convex env set FIRECRAWL_API_KEY unset --prod
 npx convex env set EXA_API_KEY unset --prod
 ```
 
-Then, from a configured project:
+Deploy:
 
 ```bash
 npm run deploy
 ```
 
-That runs `npx @convex-dev/static-hosting deploy`, which does the whole thing in one shot: builds the frontend with the production Convex URL, deploys the Convex backend, and uploads the built files to Convex storage.
+That runs Convex static hosting, builds the frontend, deploys backend functions, and uploads the built site to Convex.
 
-Your site is then live at your deployment's `.convex.site` URL, which the Convex dashboard shows under Settings. The static hosting component handles SPA routing, hashed asset caching, and garbage collection of old builds. Deploys are atomic; clients subscribed through the deployment query can offer a refresh when a new build ships.
-
-To seed production data once:
+## Development checks
 
 ```bash
-npx convex run demo:seedPublic --prod
+npx convex dev --once
+npm run check-types
+npm run lint
+npm run build
 ```
 
-## Turning off the demo reset
+There is not a formal test suite yet. The main safety checks today are Convex validation, TypeScript, ESLint, and the production build.
 
-`convex/crons.ts` registers a `demo reset` cron that wipes and reseeds every table every 10 minutes, because this repo powers a public demo. If you fork this to use as a real CRM, turn it off before you enter real data.
+## Useful docs in this repo
 
-One command flips the workspace out of demo mode:
+- `files.md` explains what each file does.
+- `CONTRIBUTING.md` explains workflow, changelog, and release expectations.
+- `prds/` contains feature specs and product intent.
+- `adrs/` contains architecture decisions.
+- `docs/upstream/` contains context from the original pre-Convex stack.
 
-```bash
-npx convex run demo:disableDemoMode         # dev deployment
-npx convex run demo:disableDemoMode --prod  # production, if you deployed
-```
+## Credits
 
-Once demo mode is off, two things change. The reset handler becomes a no-op, so even if the cron still fires it wipes nothing and logs a skip to the Activity page. And writes start requiring a signed-in user, so wire up auth next (the `/docs` page on your deployment has a section on it).
-
-The cron itself still fires every 10 minutes until you remove it, so delete the `demo reset` line from `convex/crons.ts` too. Keep the `agent tick` line; that one drives the agent task queue.
-
-Prefer to hand the whole cleanup to a coding agent? Paste this into Cursor, Codex, Claude Code, or whatever you use:
-
-```text
-I forked waynesutton/trycrm-convex and I am using it as a real CRM, not a public demo. Make sure my data is never wiped: run npx convex run demo:disableDemoMode on my dev deployment, and if I have a production deployment run it again with --prod. Then delete the demo reset cron line from convex/crons.ts and push. Leave the agent tick cron in place. Finish by confirming the workspace row has demoMode set to false.
-```
-
-## What works in the demo
-
-- Companies, contacts, deals board, dashboard rollups, custom fields, timelines, all real time
-- Notes and tasks on every company and contact: due dates, email reminders through the selected provider, complete buttons, all mirrored to the Activity page
-- Compose email from any company or contact: a draggable, resizable window with To, Cc, Bcc, markdown preview, and attachments; the timeline records every send, and delivery waits for a Resend or AgentMail key
-- Settings split into pages with a sub-sidebar: Team, Integrations, Slack, Email (provider, from identity, signature), AI provider, Sidebar, Custom fields
-- Slack integration, off by default: event notifications with per-event toggles, a channel picker with search, a test button, and a `/crm` slash command bot
-- Table sorting, filtering, and inline add rows on Companies and Contacts
-- Deals as a drag and drop board plus a sortable list view
-- Ask: a Claude-style workspace chat with streamed replies, slash commands (including `/task` and `/note`, which need no AI key), a thread sub-sidebar, archive, and delete
-- Command-K search backed by Convex full text search indexes on companies, contacts, and deals
-- Activity: a live dashboard-style log of function outcomes with pause, select one or all, and clear
-- Sidebar items reorder by drag and drop; Settings can hide items; the rail icon collapses the sidebar
-- Agent task queue with leasing, workpools, and scheduled rechecks that require a reason
-- Agents that build agents: describe a process, get a versioned draft definition
-- Record chat with web research tools (Firecrawl, Exa, or Context.dev, any one key is enough) that answer honestly about missing keys
-- AI provider picker: OpenAI, Claude, OpenRouter, DeepSeek, or Grok, none configured by default
-- Dark and light themes with a toggle in the header and the sidebar footer
-- Demo reset every 10 minutes via cron (the Activity log resets with it)
-
-What is intentionally off in the demo: sign-in (the code is structured for Convex Auth; the demo keeps writes open on seeded data), outbound email (Resend and AgentMail are installed but no keys are set), and Slack (built in, but the demo never posts).
-
-## How it compares to upstream
-
-The app has a live comparison page at `/compare` and full setup docs at `/docs`. Short version:
-
-| Area            | trycompai/crm                           | This version                                                                                      |
-| --------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Hosting         | Vercel plus a separate API              | Convex static hosting                                                                             |
-| Database        | Postgres with Prisma                    | Convex database                                                                                   |
-| Realtime        | Polling and invalidation                | Reactive queries                                                                                  |
-| Queue           | Redis backed workers                    | Workpool components, queue as a table                                                             |
-| Auth            | Better Auth                             | Convex Auth ready, off in demo                                                                    |
-| Email           | Resend SDK calls                        | Resend or AgentMail components, switchable                                                        |
-| Web research    | Not included                            | Firecrawl or Context.dev scraping and Exa or Context.dev search as agent tools; any one key works |
-| AI providers    | OpenAI                                  | OpenAI, Claude, OpenRouter, DeepSeek, or Grok, switchable in Settings                             |
-| Workspace chat  | Per-record chat only                    | Ask page with streamed replies, slash commands, and thread history                                |
-| Notes and tasks | Notes on records                        | Notes and tasks with due dates, reminders, and completion                                         |
-| Search          | Per-table inputs                        | Command-K palette on full text search indexes                                                     |
-| Observability   | Server logs                             | Activity page streams function outcomes live                                                      |
-| Services to run | Frontend, API, Postgres, Redis, workers | One Convex deployment                                                                             |
-| Package manager | bun, Turborepo                          | npm, single package                                                                               |
-
-## Project layout
-
-```
-convex/            Backend: schema, functions, components config, crons
-convex/model/      Shared logic: access control, cascade deletes, seed data
-src/app/           CRM screens: dashboard, companies, contacts, deals, ask, activity, agents, settings
-src/pages/         Landing, compare, and docs pages
-src/components/    Shared UI primitives, demo banner, theme toggle
-public/            Static assets served with the app
-docs/              Upstream docs and port instructions
-```
-
-`files.md` has a description of every file. `changelog.md` tracks changes.
-
-## License and credits
-
-MIT licensed, the same license as the upstream project. The product design, agent philosophy, and seed content come from [Comp AI's CRM](https://github.com/trycompai/crm). This port swaps the infrastructure for Convex and its [components](https://www.convex.dev/components).
+This project builds on the original open source CRM work from [trycompai/crm](https://github.com/trycompai/crm), then ports and extends it around Convex as the single application platform.
