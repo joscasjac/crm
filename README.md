@@ -27,53 +27,96 @@ Try it at [convex.link/crmonconvex](https://convex.link/crmonconvex) (served fro
 
 ## What changed in this fork
 
-This fork turns the CRM into a uniform object workspace. The goal is simple: companies, contacts, deals, projects, tasks, notes, and future custom objects should feel like the same product instead of seven separate pages that happen to share a sidebar.
+This fork is no longer only an infrastructure port. The new code turns the CRM into a Convex-native object workspace: every record type is meant to share the same table, view, side-panel, custom-field, import/export, and bulk-action architecture.
 
-The main changes:
+That matters because a CRM stops scaling as a product when every object has its own special page. If Companies has one table, Deals has another, Tasks has a third, and custom objects have a fourth, every improvement has to be rebuilt four times. The 17k+ lines added here are mostly the work of pulling those patterns into reusable backend models and frontend components so new CRM objects can inherit the same behavior.
 
-- **Shared object UI.** Object pages use the same header, view switcher, toolbar, table shell, row selection, side panel, and options patterns.
-- **Views for every object.** Objects can have saved views. The locked default view stays stable, and extra table, kanban, or calendar views live under that object's view selector instead of becoming sidebar items.
-- **Kanban and calendar as view types.** Kanban is not a separate page. It is a saved view configured from a field with usable options, such as stage, status, priority, owner, or a select custom field.
-- **First-class work objects.** Projects, tasks, and notes are promoted into the same object model as companies, contacts, and deals.
-- **Custom objects and relationships.** The schema now supports user-created objects, fields, records, and relationship definitions, so the CRM can model more than the built-in sales objects.
-- **Shared record side panels.** New records open in a right-side panel. From a record, the user can work across Home, Timeline, Tasks, Notes, Emails, and related tabs without losing table context.
-- **Import, export, multi-select, and bulk actions.** The object pages are being shaped around the same operating surface so bulk record work can be implemented once and reused everywhere.
+The most important additions are:
 
-Why: CRMs become painful when each object grows its own special page. The architecture here pushes the app toward one reusable object workspace, so adding another object or field type does not mean rebuilding table controls, saved views, side panels, import/export, filters, or kanban again.
+| Area | What was added | Why it is useful |
+| --- | --- | --- |
+| Object workspace | Shared table chrome, view selector, toolbar, row selection, create button, record side panel, and options menu patterns | Companies, contacts, deals, projects, tasks, notes, and custom objects can behave like one product instead of separate screens |
+| Saved views | Per-object saved views with a locked default view and user-created table, kanban, and calendar views | Users can create alternate views without changing the sidebar or overwriting the default table |
+| Universal kanban/calendar | `ObjectViews` can render records as kanban or calendar from saved-view configuration | Any object with a usable option/date field can get a board or calendar view, not only deals |
+| Shared tables | Reusable table infrastructure for column menus, hide/show, move left/right, inline editing, custom fields, multi-select, and CSV import/export | A table feature can be implemented once and reused across all objects |
+| Work objects | Projects, tasks, and notes were promoted into first-class objects | Work management now lives in the same CRM data model as sales records |
+| Notes object | Notes can be opened from the sidebar and edited like records, while still linking back to CRM entities | Notes are not trapped inside one record timeline |
+| Custom objects | User-defined objects, fields, records, and relationship definitions were added | The CRM can model customer-specific workflows beyond companies, contacts, and deals |
+| Record side panels | A common side panel supports Home, Timeline, Tasks, Notes, Emails, favorites, and record actions | Users can create or inspect a record without losing their place in the table or board |
+| Activity and timeline | Timelines can be scoped to the highlighted record, and workspace activity can aggregate across records | Record history becomes navigable instead of being a short fixed preview |
+| Access and deployment | Read/write access helpers, Convex Auth wiring points, public-demo mode, and optional integration keys | The app can be public-demo friendly while still having a clear path to private CRM use |
+
+The design direction is intentionally Airtable/Notion-like: objects have stable default views, users add more views when needed, and the object page stays the place where the work happens. A kanban view should be a view of Tasks or Companies, not a new sidebar destination.
 
 ## How it works
 
-The app has two layers: a metadata-driven Convex backend and a shared React object workspace.
+The app is built around one metadata-driven loop:
 
-On the backend, `convex/schema.ts` defines the core CRM tables:
+1. An object has records in Convex.
+2. The object exposes a default locked table view.
+3. Users can add saved views for the same object.
+4. A saved view chooses a type: table, kanban, or calendar.
+5. The same record set renders through shared React components.
+6. Opening a record shows the shared side panel for fields, timeline, tasks, notes, and email.
 
-- `companies`, `contacts`, and `deals` for sales records.
-- `projects` and `projectTasks` for delivery and work management.
-- `activities` for timeline entries, notes, tasks, reminders, and email history.
-- `fieldDefinitions` and `fieldValues` for custom fields on built-in objects.
-- `savedViews` for per-object table, kanban, and calendar views.
-- `customObjects`, `customObjectFields`, `customObjectRecords`, and relationship tables for user-defined objects.
+### Backend Model
 
-Convex queries read through indexes and return live data to React. Mutations go through `writeMutation`, which centralizes access checks before anything writes. Actions handle external services such as AI providers, enrichment, email, Slack, web search, and scraping.
+`convex/schema.ts` defines the built-in CRM records and the metadata that makes them extensible:
 
-On the frontend, object pages are built from shared pieces:
+- `companies`, `contacts`, and `deals` hold sales records.
+- `projects` and `projectTasks` hold delivery and work-management records.
+- `activities` stores timeline entries, notes, tasks, reminders, and email history.
+- `fieldDefinitions` and `fieldValues` store custom fields for built-in objects.
+- `savedViews` stores per-object table, kanban, and calendar views.
+- `customObjects`, `customObjectFields`, `customObjectRecords`, and relationship tables store user-created objects and links between records.
+- `favorites` and trash-related flows support workspace-level record actions.
 
-- `ObjectTableChrome` renders the top object header, selected count, create button, and right-side options panel.
-- `SavedViewButton` owns the view dropdown, default locked view, saved views, and create-view flow.
-- `dataTable` owns column preferences, header menus, hidden fields, custom field creation, sticky columns, and inline field editing.
-- `ObjectDataTable` is the reusable selectable table used by newer object pages such as Notes and Custom Objects.
-- `ObjectViews` renders kanban and calendar views from the same records when the saved view changes type.
-- `RecordSidePanel`, `Timeline`, and `ComposeEmail` provide the common record-detail workflow.
+Convex queries read through indexes and stream live results to React. Mutations go through `writeMutation`, which centralizes access checks before data changes. Actions handle external work such as AI providers, enrichment, email, Slack, web search, and scraping.
 
-The intended flow is:
+### Frontend Model
+
+The frontend is being organized around reusable object components:
+
+- `ObjectTableChrome` renders the object header, selected count, create action, view bar, and right-side options panel.
+- `SavedViewButton` owns the locked default view, saved-view dropdown, create-view flow, view type, and kanban grouping field.
+- `dataTable` owns the table mechanics: column menus, sorting affordances, move left/right, hide/show, sticky columns, custom-field columns, inline editing, and custom-field creation.
+- `ObjectDataTable` provides a reusable selectable table for newer object pages such as Notes and Custom Objects.
+- `ObjectViews` renders kanban and calendar views from the same records and saved-view configuration.
+- `RecordSidePanel`, `Timeline`, and `ComposeEmail` provide the shared record-detail workflow.
+- `csv.ts`, `tableFilters.tsx`, and `interaction.ts` hold shared import/export, filtering, and click-behavior utilities.
+
+The intended user flow is:
 
 1. Pick an object from the sidebar.
-2. Choose a saved view from that object's view selector.
-3. Work in table, kanban, or calendar without leaving the object.
-4. Open or create a record in the side panel.
-5. Edit fields, create tasks or notes, send email, and see timeline activity tied to that record.
+2. Use the view selector to stay on the default table or open a saved view.
+3. Work in table, kanban, or calendar without leaving that object.
+4. Create records from the top button into the right side panel, or inline from the table/kanban where context matters.
+5. Edit fields, assign people, create tasks, write notes, send email, and inspect timeline history from the same record panel.
 
-For large tables, list views should page through Convex queries rather than loading the whole table. That keeps the object workspace usable as records grow, and it keeps filtering, import/export, and bulk actions tied to the same data access layer instead of scattered across pages.
+### Custom Objects And Relationships
+
+Custom objects use the same idea as built-in objects. A custom object has:
+
+- A definition row that names the object and controls how it appears.
+- Field definitions for the object's schema.
+- Record rows with field values.
+- Relationship definitions that describe how this object connects to other objects.
+- Relationship rows that link specific records.
+
+That means a workspace can add something like Vendors, Properties, Candidates, Renewals, or Onboarding Plans without adding a new hardcoded page for each one. The object workspace supplies the table, views, side panel, field editing, and relationship surface.
+
+### Performance Model
+
+The architecture is intended to handle thousands of records per object by keeping heavy work out of React render loops:
+
+- List pages use Convex queries and pagination instead of loading every record into the browser.
+- Queries should read through indexes; new filters should get schema indexes instead of client-side full scans.
+- Custom field values are fetched in batches for the records visible in the current table page.
+- Saved views store configuration, not duplicated record sets.
+- Kanban and calendar views derive from the same object data and should update records through the object mutation layer.
+- Bulk work and import/export should run in batches so 5k-record objects stay responsive.
+
+The current repo is still moving toward total uniformity, but this is the architecture the new code establishes: one object system, one view system, one record panel, one table foundation, and one Convex backend to keep it live.
 
 ## The stack
 
